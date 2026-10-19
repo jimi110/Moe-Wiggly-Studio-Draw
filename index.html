@@ -64,6 +64,8 @@ progress{width:100%;accent-color:var(--ac)}
 @media(max-width:480px){#bsz{width:64px}#bar{gap:2px;padding:5px}.ib{width:40px;height:40px}#col{width:30px;height:30px}.tabs button{font-size:11px}.pj button{padding:6px 5px}}
 @media(max-height:500px) and (orientation:landscape){#sheet{height:calc(100vh - 92px)}#bsz{width:70px}}
 .td{display:flex;gap:6px;margin-bottom:14px}.td i{width:7px;height:7px;border-radius:4px;background:var(--ln);transition:width .5s var(--sp),background .3s}.td i.on{width:22px;background:var(--ac)}.tb b{font-size:18px}.tb p{font-size:14px;line-height:1.45;min-height:84px}.tb em{font-style:normal;color:var(--mu);font-size:12px}
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--mu) 50%,transparent) transparent}
+::-webkit-scrollbar{width:8px;height:8px;background:transparent}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--mu) 50%,transparent);border-radius:8px;border:2px solid transparent;background-clip:padding-box}::-webkit-scrollbar-thumb:hover{background:var(--mu);background-clip:padding-box}
 @media(prefers-reduced-motion:reduce){*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style></head><body>
 <div id="st" class="glass">Guardado</div><div id="toast" class="glass"></div><div id="cur"></div>
@@ -83,7 +85,7 @@ progress{width:100%;accent-color:var(--ac)}
 const $=s=>document.querySelector(s);
 const B={brush:'pxsq',color:'#000000',size:4,alpha:1,mode:'nervous',amp:4,speed:1.2,wl:50};
 const G={anim:true,pause:false,gs:1};
-let doc={strokes:[],bg:'#ffffff',w:1000,h:1000},undo=[],redo=[],T=0,D=1,sc=1,view={z:1,x:0,y:0},busy=false,cancel=false;
+const defDim=()=>innerWidth>=900?[1000,563]:innerWidth<600?[563,1000]:[750,1000];let doc={strokes:[],bg:'#ffffff',w:defDim()[0],h:defDim()[1]},undo=[],redo=[],T=0,D=1,sc=1,view={z:1,x:0,y:0},busy=false,cancel=false;
 const cv=$('#cv'),ctx=cv.getContext('2d'),wrap=$('#wrap'),sheet=$('#sheet');
 const snap=()=>({strokes:doc.strokes.slice(),bg:doc.bg,w:doc.w,h:doc.h});
 function toast(m,ms=2800){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),ms)}
@@ -172,7 +174,7 @@ async function saveNow(){clearTimeout(sv);try{if(!pid){pid=nid();lsSet(pid)}cons
  await tx('pj','readwrite',s=>s.put({id:pid,name:pname,mod:Date.now(),thumb:o.toDataURL('image/jpeg',.7),doc:{strokes:doc.strokes,bg:doc.bg,w:doc.w,h:doc.h}}));$('#st').textContent='Guardado';if(p4.classList.contains('on'))listP()}catch(e){$('#st').textContent='Sin guardar';toast('No se pudo guardar localmente. Exporta una copia .wiggly desde Exportar.')}}
 /* ---------- UI ---------- */
 function row(p,l,o,k,mn,mx,st,cb){const d=document.createElement('label');d.className='row';d.innerHTML=`<span>${l}</span><output></output><input type=range min=${mn} max=${mx} step=${st}>`;const i=d.querySelector('input'),u=d.querySelector('output');i.value=o[k];u.textContent=o[k];i.oninput=()=>{o[k]=+i.value;u.textContent=i.value;cb&&cb()};p.append(d);return i}
-function chips(p,list,o,k,cb){const d=document.createElement('div');d.className='chips';list.forEach(([v,n])=>{const b=document.createElement('button');b.className='chip'+(o[k]===v?' on':'');b.textContent=n;b.onclick=()=>{o[k]=v;d.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));cb&&cb(v)};d.append(b)});p.append(d)}
+function chips(p,list,o,k,cb){const d=document.createElement('div');d.className='chips';list.forEach(([v,n])=>{const b=document.createElement('button');b.className='chip'+(o[k]===v?' on':'');b.dataset.v=v;b.textContent=n;b.onclick=()=>{o[k]=v;d.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on',x===b));cb&&cb(v)};d.append(b)});p.append(d)}
 const btn=(p,t,f,c='')=>{const b=document.createElement('button');b.className='btn '+c;b.textContent=t;b.onclick=f;p.append(b);return b};
 const hd=(p,t)=>{const h=document.createElement('h4');h.textContent=t;p.append(h)};
 const p0=$('#p0'),p1=$('#p1'),p2=$('#p2'),p3=$('#p3');let szIn;
@@ -184,7 +186,7 @@ hd(p1,'Todo el lienzo');row(p1,'Velocidad global',G,'gs',.1,3,.1);
 const tg=btn(p1,'Pausar animación',()=>{G.pause=!G.pause;tg.textContent=G.pause?'Reanudar animación':'Pausar animación';D=1});
 const tv=btn(p1,'Vibración global: activada',()=>{G.anim=!G.anim;tv.textContent='Vibración global: '+(G.anim?'activada':'desactivada');D=1});
 hd(p1,'Los trazos ya dibujados conservan su propia vibración');
-hd(p2,'Formato');chips(p2,[['1000x1000','Cuadrado'],['750x1000','Vertical'],['1000x750','Horizontal'],['563x1000','Story 9:16']],{f:doc.w+'x'+doc.h},'f',v=>change(()=>{[doc.w,doc.h]=v.split('x').map(Number)}));
+hd(p2,'Formato');chips(p2,[['1000x563','PC 16:9'],['563x1000','Móvil 9:16'],['1000x1000','Cuadrado'],['750x1000','Vertical'],['1000x750','Horizontal']],{f:doc.w+'x'+doc.h},'f',v=>change(()=>{[doc.w,doc.h]=v.split('x').map(Number)}));
 hd(p2,'Fondo');const bgI=document.createElement('input');bgI.type='color';bgI.value='#ffffff';bgI.onchange=()=>change(()=>doc.bg=bgI.value);p2.append(bgI);
 hd(p2,'Acciones');btn(p2,'Restablecer vista',()=>{view={z:1,x:0,y:0};setView()});
 btn(p2,'Limpiar lienzo',async()=>{const a=await ask({t:'¿Limpiar el lienzo?',m:'Podrás deshacerlo.',ok:'Limpiar',okc:'red'});if(a.r==='ok')change(()=>doc.strokes=[])},'red');
@@ -225,7 +227,7 @@ async function exportGif(){if(busy)return;busy=true;cancel=false;gb.hidden=true;
 /* ---------- barra y hoja ---------- */
 const tabs=$('.tabs'),pns=[[p0,p1].map((x,i)=>x)][0];
 const panes=[['Pincel',['p0']],['Vibración',['p1']],['Lienzo',['p2']],['Exportar',['p3']],['Proyectos',['p4']]];
-function tab(i){const dr=i>=(tab.c||0)?1:-1;tab.c=i;document.documentElement.style.setProperty('--d',dr);const ind=tabs.querySelector('.ind');if(ind)ind.style.transform=`translateX(${i*100}%)`;tabs.querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',i===j));[p0,p1,p2,p3,p4].forEach((p,j)=>p.classList.toggle('on',i===j));pv.style.display=i<2?'block':'none';if(i===4)listP()}
+function tab(i){const dr=i>=(tab.c||0)?1:-1;tab.c=i;document.documentElement.style.setProperty('--d',dr);const ind=tabs.querySelector('.ind');if(ind)ind.style.transform=`translateX(${i*100}%)`;tabs.querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',i===j));[p0,p1,p2,p3,p4].forEach((p,j)=>p.classList.toggle('on',i===j));pv.style.display=i<2?'block':'none';if(i===2)p2.querySelectorAll('.chip[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===doc.w+'x'+doc.h));if(i===4)listP()}
 panes.forEach(([n],i)=>{const b=document.createElement('button');b.textContent=n;b.onclick=()=>tab(i);tabs.append(b)});tabs.insertAdjacentHTML('afterbegin','<i class="ind"></i>');
 function openSheet(i){if(sheet.classList.contains('open')&&tabs.children[i].classList.contains('on')){closeSheet();return}tab(i);sheet.classList.add('open');document.body.classList.add('sh')}
 function closeSheet(){sheet.classList.remove('open');document.body.classList.remove('sh')}
@@ -243,7 +245,7 @@ function ask(o){return new Promise(res=>{const d=document.createElement('div');d
  d.onpointerdown=e=>{if(e.target===d)done(null)};if(inp)inp.onkeydown=e=>{if(e.key==='Enter')done('ok');if(e.key==='Escape')done(null)};
  document.body.append(d);requestAnimationFrame(()=>{d.classList.add('on');if(inp){inp.focus();inp.select()}})})}
 const reset=()=>{undo=[];redo=[];fit();sync()};
-btn(p4,'Nuevo proyecto',async()=>{if(doc.strokes.length){const a=await ask({t:'¿Crear un proyecto nuevo?',m:`«${pname}» se guarda automáticamente. Si no quieres conservarlo, puedes descartarlo.`,ok:'Guardar y crear nuevo',alt:'Descartar este y crear nuevo',altc:'red'});if(!a.r)return;if(a.r==='alt'){clearTimeout(sv);if(pid)await tx('pj','readwrite',s=>s.delete(pid))}else await saveNow()}pid=nid();lsSet(pid);pname='Sin título';Object.assign(doc,{strokes:[],bg:'#ffffff',w:1000,h:1000});bgI.value='#ffffff';reset();await saveNow();toast('Proyecto nuevo')},'pri');
+btn(p4,'Nuevo proyecto',async()=>{if(doc.strokes.length){const a=await ask({t:'¿Crear un proyecto nuevo?',m:`«${pname}» se guarda automáticamente. Si no quieres conservarlo, puedes descartarlo.`,ok:'Guardar y crear nuevo',alt:'Descartar este y crear nuevo',altc:'red'});if(!a.r)return;if(a.r==='alt'){clearTimeout(sv);if(pid)await tx('pj','readwrite',s=>s.delete(pid))}else await saveNow()}pid=nid();lsSet(pid);pname='Sin título';Object.assign(doc,{strokes:[],bg:'#ffffff',w:defDim()[0],h:defDim()[1]});bgI.value='#ffffff';reset();await saveNow();toast('Proyecto nuevo')},'pri');
 btn(p4,'Guardar ahora',async()=>{await saveNow();toast('Guardado en este dispositivo')});
 const TUT=[['Bienvenido a Moe Wiggly Studio','Una app de dibujo cuyos trazos parecen tener vida. Te cuento lo básico en cinco pasos.'],['Dibuja y usa la barra','Dibuja con el dedo, el ratón o el Apple Pencil. La barra de abajo tiene el pincel, el color, el tamaño, deshacer y rehacer, y el menú.'],['Pinceles y vibración','En «Pincel» eliges la herramienta y en «Vibración», cómo se mueve el trazo. Cada trazo guarda su propio color, pincel y vibración, así que puedes mezclarlos.'],['Lienzo y zoom','En «Lienzo» cambias el formato y el color de fondo. Con dos dedos haces zoom y mueves la vista.'],['Guardar y exportar','Todo se guarda solo en tu dispositivo. En «Proyectos» gestionas tus dibujos y en «Exportar» sacas PNG, GIF animado o un archivo .wiggly.']];
 function showTut(){let i=0;const d=document.createElement('div');d.className='dlg';d.innerHTML='<div class="dc glass"><div class="td"></div><div class="tb"><b></b><p></p></div><div class="db"><button class="btn">Saltar</button><button class="btn pri"></button></div></div>';
