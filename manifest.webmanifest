@@ -1,0 +1,14 @@
+{
+  "name": "Moe Wiggly Studio",
+  "short_name": "Moe Wiggly",
+  "description": "Una app de dibujo cuyos trazos parecen tener vida.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eceef1",
+  "theme_color": "#eceef1",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
