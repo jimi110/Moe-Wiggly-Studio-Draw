@@ -125,6 +125,18 @@ progress[hidden]{display:none}.btn[hidden]{display:none}
 .chip:active::before,.btn:active::before,.ly .bs button:active::before,.pj button:active::before,.tabs button:active::before{opacity:1;transform:scale(1.08)}
 @media(hover:hover){.chip:hover::before,.btn:hover::before,.ly .bs button:hover::before,.pj button:hover::before,.tabs button:hover::before{opacity:1;transform:scale(1.04)}}
 .ly .bs button:active,.pj button:active{transform:scale(1.1)}
+
+/* ---------- modo online ---------- */
+#bO{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:4;border-radius:50%;transition:opacity .4s,transform .5s var(--sp)}body.draw #bO{opacity:.3}
+#bO .bg{position:absolute;right:-2px;bottom:-2px;min-width:16px;height:16px;padding:0 4px;box-sizing:border-box;border-radius:8px;background:var(--ac);color:#fff;font-size:10px;line-height:16px;font-weight:700;text-align:center;display:none}#bO.live .bg{display:block}
+#rv{right:64px}
+#opan{position:fixed;z-index:8;right:12px;top:calc(env(safe-area-inset-top,0px) + 62px);width:min(340px,calc(100vw - 24px));max-height:calc(100vh - 150px);overflow:auto;box-sizing:border-box;border-radius:28px;padding:14px;background:var(--sh2);opacity:0;transform:translateY(-12px) scale(.96);transform-origin:top right;pointer-events:none;touch-action:auto;transition:transform .5s var(--sp),opacity .25s}
+#opan.open{opacity:1;transform:none;pointer-events:auto}
+#opan h4:first-child{margin-top:2px}#opan .di{margin:4px 0}
+.who{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--mu);margin:6px 0}.who b{color:var(--tx)}.who button{border:0;background:var(--ln);color:var(--tx);border-radius:12px;padding:5px 10px;cursor:pointer}
+.cd{display:flex;gap:8px;align-items:center;margin:4px 0}.cd code{flex:1;font:600 20px ui-monospace,Menlo,monospace;letter-spacing:.12em;user-select:text;-webkit-user-select:text}
+.pr{display:flex;align-items:center;gap:8px;padding:6px 4px}.pr i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--ln)}.pr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr small{color:var(--mu);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hb{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:var(--ac);border-radius:8px;padding:1px 6px}
+#oc{position:fixed;inset:0;z-index:6;pointer-events:none;overflow:hidden}.pc{position:absolute;left:0;top:0;will-change:transform}.pc i{display:block;width:12px;height:12px;margin:-2px 0 0 -2px;border-radius:0 50% 50% 50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.5);background:var(--c)}.pc span{position:absolute;left:14px;top:12px;white-space:nowrap;padding:2px 8px;border-radius:9px;font-size:11px;color:#fff;background:var(--c);text-shadow:0 0 2px rgba(0,0,0,.5);opacity:0;transition:opacity .2s}.pc.nm span{opacity:1}
 </style></head><body>
 <div id="st" class="glass">Guardado</div><div id="toast" class="glass"></div><div id="cur"></div>
 <div id="stage"><div id="wrap"><canvas id="cv"></canvas></div></div>
@@ -133,7 +145,8 @@ progress[hidden]{display:none}.btn[hidden]{display:none}
 <canvas id="pv" width="560" height="140"></canvas><div class="pn" id="p0"></div>
 <div class="pn" id="p1"></div><div class="pn" id="p2"></div><div class="pn" id="p3"></div><div class="pn" id="p4"></div><div class="pn" id="p5"></div></div></div>
 <button id="rv" class="ib glass" title="Restablecer vista (R)" aria-label="Restablecer vista"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-<div id="cpop" class="glass"></div>
+<button id="bO" class="ib glass" title="Modo online: dibujar con amigos" aria-label="Modo online"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.9 0 5 2.1 5 5.2"/></svg><span class="bg"></span></button>
+<div id="cpop" class="glass"></div><div id="opan" class="glass"></div><div id="oc"></div>
 <div id="bar" class="glass">
 <button class="ib" id="bBr" title="Pinceles"><svg viewBox="0 0 24 24"><path d="M3 21c3 0 5-1 5-4l9-9-3-3-9 9c-3 0-2 5-2 7zM14 6l3 3 3-3-3-3z"/></svg></button>
 <button class="ib" id="col" title="Color" aria-label="Color"></button>
@@ -227,7 +240,7 @@ function pos(e){const r=cv.getBoundingClientRect(),s=F*view.z;return[(e.clientX-
 function addPt(e){const[x,y]=pos(e),P=cur.pts,m=cur.brush==='dots'||cur.brush==='stars'?cur.size*1.4:cur.brush==='chalk'?5:1.5;
  if(P.length){const p=P[P.length-1],d=Math.hypot(x-p[0],y-p[1]);if(d<m)return;P.push([x,y,e.pointerType==='pen'&&e.pressure?e.pressure:1,p[3]+d])}else P.push([x,y,e.pointerType==='pen'&&e.pressure?e.pressure:1,0]);D=1}
 cv.addEventListener('pointerdown',e=>{closeSheet();document.body.classList.add('draw');cu.style.opacity=0;cv.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,e);
- if(ptrs.size===2){if(cur){doc.strokes=prev;cur=null}const[a,b]=[...ptrs.values()];pin={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,v:{...view}};return}
+ if(ptrs.size===2){if(cur){doc.strokes=doc.strokes.filter(x=>x!==cur);cur=null}const[a,b]=[...ptrs.values()];pin={d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),cx:(a.clientX+b.clientX)/2,cy:(a.clientY+b.clientY)/2,v:{...view}};return}
  if(e.button===1){e.preventDefault();pan={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};return}if(ptrs.size>2||e.button>0)return;if(eye){pick(e,true);return}if(B.brush==='picker'){pick(e);return}if(B.brush==='fill'){doFill(e);return}const al=actL();if(!al.vis||al.lock){toast(al.lock?'La capa activa está bloqueada':'La capa activa está oculta');return}
  prev=doc.strokes.slice();const er=B.brush==='eraser';
  cur={layer:al.id,brush:B.brush,color:B.color,size:B.size,alpha:B.alpha,mode:er?'none':B.mode,amp:B.amp,speed:B.speed,wl:B.wl,irr:B.irr,env:B.env,seed:Math.random()*100,erase:er,pts:[]};
@@ -429,4 +442,5 @@ pl.onclick=async e=>{const b=e.target.closest('button');if(!b)return;const id=b.
  if(p){pid=p.id;pname=p.name;Object.assign(doc,{layers:null,act:null},p.doc);bgI.value=doc.bg}}catch(e){toast('Este navegador no permite guardar localmente. Exporta copias .wiggly.')}
  fit();sync();let t0=0;try{t0=+localStorage.getItem('wtab')||0}catch{}tab(t0>=0&&t0<panes.length?t0:0);sheet.classList.remove('open');requestAnimationFrame(frame);try{if(!localStorage.getItem('wtut'))setTimeout(showTut,700)}catch{}})();
 if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-</script></body></html>
+</script>
+<script src="online-config.js"></script><script src="online.js"></script></body></html>
