@@ -4,7 +4,7 @@
 
 Os presento **Moe Wiggly Studio**, mi propia aplicación de dibujo en movimiento. He intentado crear algo bastante completo, con un montón de opciones para dibujar, experimentar y, sobre todo, pasar un buen rato haciendo que los trazos cobren vida.
 
-No os voy a soltar una explicación técnica aburrida ni una lista eterna de botones. Os hago un pequeño recorrido por lo que podéis encontrar, pero os recomiendo de verdad que entréis, lo probéis y trasteéis un poco. ¡Seguro que descubrís combinaciones que ni yo me esperaba! 😄
+Os hago un pequeño recorrido por lo que podéis encontrar, pero os recomiendo de verdad que entréis, lo probéis y trasteéis un poco. ¡Seguro que descubrís combinaciones que ni yo me esperaba! 😄
 
 ## 🖌️ Aquí los trazos no se quedan quietos
 
