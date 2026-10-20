@@ -135,7 +135,7 @@ progress[hidden]{display:none}.btn[hidden]{display:none}
 #opan h4:first-child{margin-top:2px}#opan .di{margin:4px 0}
 .who{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--mu);margin:6px 0}.who b{color:var(--tx)}.who button{border:0;background:var(--ln);color:var(--tx);border-radius:12px;padding:5px 10px;cursor:pointer}
 .cd{display:flex;gap:8px;align-items:center;margin:4px 0}.cd code{flex:1;font:600 20px ui-monospace,Menlo,monospace;letter-spacing:.12em;user-select:text;-webkit-user-select:text}
-.pr{display:flex;align-items:center;gap:8px;padding:6px 4px}.pr i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--ln)}.pr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr small{color:var(--mu);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hb{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:var(--ac);border-radius:8px;padding:1px 6px}
+.pr{display:flex;align-items:center;gap:8px;padding:6px 4px}.pr i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--ln)}.pr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr small{color:var(--mu);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kb{border:0;background:var(--ln);color:#ff453a;border-radius:10px;padding:3px 9px;font-size:12px;cursor:pointer;flex:none}.pwe{width:auto;padding:6px 10px;flex:none;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-touch-callout:none}.pwe svg{width:18px;height:18px;display:block}.hb{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:var(--ac);border-radius:8px;padding:1px 6px}
 #oc{position:fixed;inset:0;z-index:6;pointer-events:none;overflow:hidden}.pc{position:absolute;left:0;top:0;will-change:transform}.pc i{display:block;width:12px;height:12px;margin:-2px 0 0 -2px;border-radius:0 50% 50% 50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.5);background:var(--c)}.pc span{position:absolute;left:14px;top:12px;white-space:nowrap;padding:2px 8px;border-radius:9px;font-size:11px;color:#fff;background:var(--c);text-shadow:0 0 2px rgba(0,0,0,.5);opacity:0;transition:opacity .2s}.pc.nm span{opacity:1}
 
 /* ---------- mejoras: iconos, animación de pestañas, lupa, modo sin Liquid Glass ---------- */
@@ -789,7 +789,7 @@ FX.forEach(f=>{
  f.cor.onpointerup=f.cor.onpointercancel=()=>{z=null;f.drag=0;f.until=performance.now()+900}});
 function fxLoop(){const now=performance.now(),vw=innerWidth,vh=innerHeight,sa=fxSafe();
  for(const f of FX){const op=f.el.classList.contains('open'),pd=!!PIN[f.id],hs=op&&pd;
-  f.pin.classList.toggle('on',op);f.pin.classList.toggle('pd',pd);f.grab.classList.toggle('on',hs);f.cor.classList.toggle('on',hs);
+  f.pin.classList.toggle('on',op&&(f.id!=='opan'||!!(window.Online&&Online.inRoom)));f.pin.classList.toggle('pd',pd);f.grab.classList.toggle('on',hs);f.cor.classList.toggle('on',hs);
   if(!op)continue;const r=f.el.getBoundingClientRect();
   let x=f.anc==='tr'?r.right-30:r.left-34,y=f.anc==='tr'?r.top-34:r.top;x=Math.max(4,Math.min(vw-34,x));y=Math.max(sa+4,Math.min(vh-34,y));f.pin.style.transform=`translate3d(${x}px,${y}px,0)`;
   if(hs){const v=f.drag||now<f.until;f.grab.classList.toggle('vis',v);f.cor.classList.toggle('vis',v);f.grab.style.transform=`translate3d(${r.left+r.width/2-48}px,${r.bottom-24}px,0)`;f.cor.style.transform=`translate3d(${r.right-30}px,${r.bottom-30}px,0)`}}

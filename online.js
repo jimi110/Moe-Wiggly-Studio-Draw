@@ -4,16 +4,21 @@
    Trazos en curso → Broadcast (efímero). Estado persistente → tabla room_ops vía RPC push_ops (los nuevos lo reciben al entrar). */
 (()=>{'use strict';
 const C=window.MOE_ONLINE||{},LSK='moeWigglyUsername',SDK='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
-const O=window.Online={on:false,loading:false};
-let sb,me,room=null,roster=[],ch=null,dbch=null,mir=null,seen=new Set(),lastSeq=0,out=[],sent=new Set(),flushing=false,PS=null,tmr=[],peers=new Map(),lp=[-999,-999],wait=false,view_='menu',FM={max:5,mine:false},tokN=0,cT=0,curI=null,curSent=0,lastAct=null,down=false,downSince=0,hbBusy=false,hbQ=0,dirty=false,dirtyL=false,tick=0,memName='';
+const O=window.Online={on:false,loading:false,get inRoom(){return !!room}};
+let sb,me,room=null,roster=[],ch=null,dbch=null,mir=null,seen=new Set(),lastSeq=0,out=[],sent=new Set(),flushing=false,PS=null,tmr=[],peers=new Map(),lp=[-999,-999],wait=false,view_='menu',FM={max:5,mine:false},tokN=0,cT=0,curI=null,curSent=0,lastAct=null,down=false,downSince=0,hbBusy=false,hbQ=0,rev=false,dirty=false,dirtyL=false,tick=0,memName='';
 const tokP=Math.random().toString(36).slice(2,8),tok=()=>tokP+(++tokN),newId=()=>nid()+Math.random().toString(36).slice(2,6);
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim().slice(0,24);
 const getName=()=>{let v='';try{v=localStorage.getItem(LSK)||''}catch{}return clean(v||memName)};
 const setNameLS=v=>{memName=v;try{localStorage.setItem(LSK,v)}catch{}};
 const col=c=>/^#[0-9a-f]{6}$/i.test(c)?c:'#8e8e93';
-const ERR={room_not_found:'No existe ninguna sala con ese código.',bad_password:'Contraseña incorrecta.',room_closed:'Esa sala está cerrada.',room_full:'La sala está llena: ha alcanzado su máximo de participantes (nunca más de cinco).',too_many_rooms:'Ya tienes 3 salas abiertas. Cierra alguna antes de crear otra.',not_authenticated:'No se pudo identificar este navegador. Recarga la página.',bad_name:'Pon un nombre a la sala.'};
+const ERR={room_not_found:'No existe ninguna sala con ese código.',bad_password:'Contraseña incorrecta.',room_closed:'Esa sala está cerrada.',room_full:'La sala está llena: ha alcanzado su máximo de participantes (nunca más de cinco).',too_many_rooms:'Ya tienes 3 salas abiertas. Cierra alguna antes de crear otra.',not_authenticated:'No se pudo identificar este navegador. Recarga la página.',bad_name:'Pon un nombre a la sala.',host_only:'Solo el anfitrión puede hacer eso.',cannot_kick_self:'No puedes expulsarte a ti mismo.'};
 const errMsg=e=>{const m=String((e&&e.message)||e);for(const k in ERR)if(m.includes(k))return ERR[k];return/fetch|network|Failed/i.test(m)?'Sin conexión con el servidor. Inténtalo de nuevo.':'Error: '+m.slice(0,120)};
 const P=()=>$('#opan');
+/* evita las sugerencias del navegador (correo, guardar/generar contraseña…): nombre aleatorio, sin type=password y datos para gestores */
+const SEC=!!(window.CSS&&CSS.supports&&CSS.supports('-webkit-text-security','disc'));
+function noFill(i,secret){i.setAttribute('autocomplete','off');i.name='f'+Math.random().toString(36).slice(2,10);i.spellcheck=false;
+ for(const a of['autocorrect','data-lpignore','data-1p-ignore','data-bwignore','data-form-type'])i.setAttribute(a,a==='autocorrect'?'off':a==='data-form-type'?'other':'true');
+ if(secret){if(SEC){i.type='text';i.style.setProperty('-webkit-text-security','disc')}else i.type='password'}return i}
 
 /* ---------- conexión ---------- */
 const loadSdk=()=>window.supabase?Promise.resolve():new Promise((ok,ko)=>{const s=document.createElement('script');s.src=SDK;s.onload=ok;s.onerror=()=>ko(new Error('No se pudo cargar la biblioteca de Supabase (¿sin conexión?)'));document.head.append(s)});
@@ -28,7 +33,7 @@ async function rpc(n,a){const{data,error}=await sb.rpc(n,a);if(error)throw error
 /* ---------- nombre de usuario temporal ---------- */
 function askName(cur){return new Promise(res=>{const d=document.createElement('div');d.className='dlg';
  d.innerHTML='<div class="dc glass"><svg viewBox="0 0 24 24" style="display:block;margin:2px auto 8px;width:34px;height:34px"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg><b style="display:block;text-align:center">Tu nombre de usuario</b><p>Se guardará en este navegador. Es solo un nombre visible para los demás: no hace falta cuenta ni correo.</p><input class="di" maxlength="24" placeholder="Tu nombre" autocomplete="off" spellcheck="false"><small class="er" style="display:block;min-height:16px;color:#ff453a"></small><div class="db"></div></div>';
- const i=d.querySelector('input'),er=d.querySelector('.er'),bx=d.querySelector('.db');i.value=cur||'';
+ const i=d.querySelector('input'),er=d.querySelector('.er'),bx=d.querySelector('.db');i.value=cur||'';noFill(i);
  const done=v=>{d.classList.remove('on');setTimeout(()=>d.remove(),350);res(v)},ok=()=>{const v=clean(i.value);if(!v){er.textContent='Escribe un nombre: no puede estar vacío.';i.focus();return}setNameLS(v);done(v)};
  [['Cancelar','',()=>done(null)],['Continuar','pri',ok]].forEach(([t,c,f])=>{const b=document.createElement('button');b.className='btn '+c;b.textContent=t;b.onclick=f;bx.append(b)});
  i.onkeydown=e=>{if(e.key==='Enter')ok();if(e.key==='Escape')done(null)};i.oninput=()=>er.textContent='';d.onpointerdown=e=>{if(e.target===d)done(null)};
@@ -106,7 +111,7 @@ function setRoster(l){roster=l;const b=$('#bO');b.classList.add('live');b.queryS
  for(const[u,p]of[...peers])if(!l.some(m=>m.u===u)){p.el.remove();peers.delete(u)}draw()}
 const hbSoon=()=>{clearTimeout(hbQ);hbQ=setTimeout(hbNow,400)};
 async function hbNow(){if(!room||hbBusy)return;hbBusy=true;
- try{lastAct=doc.act;const r=await rpc('heartbeat',{p_room:room.id,p_name:getName(),p_layer:doc.act||null});if(!room)return;if(r.kicked){leave('full');return}if(r.closed){leave('closed');return}setRoster(r.members)}
+ try{lastAct=doc.act;const r=await rpc('heartbeat',{p_room:room.id,p_name:getName(),p_layer:doc.act||null});if(!room)return;if(r.removed){leave('kicked');return}if(r.kicked){leave('full');return}if(r.closed){leave('closed');return}setRoster(r.members)}
  catch(e){if(/not_member|room_not_found/.test(String(e.message)))leave('gone')}finally{hbBusy=false}}
 
 /* ---------- canales ---------- */
@@ -130,26 +135,30 @@ function teardown(){tmr.forEach(clearInterval);tmr=[];clearTimeout(hbQ);closeCh(
 async function enter(r){
  try{await saveNow()}catch{}                                   // se guarda el proyecto personal antes de entrar
  PS={d:{layers:doc.layers,act:doc.act,strokes:doc.strokes,bg:doc.bg,w:doc.w,h:doc.h},u:undo,r:redo};
- room={id:r.room_id,code:r.code,name:r.name,max:r.max_players,host:r.host_id};roster=[];down=false;
+ room={id:r.room_id,code:r.code,name:r.name,max:r.max_players,host:r.host_id,pw:null};roster=[];down=false;
  undo=[];redo=[];Object.assign(doc,{strokes:[],layers:null,act:null});mir={s:new Map(),layers:[],bg:doc.bg,w:doc.w,h:doc.h};seen=new Set();lastSeq=0;out=[];sent.clear();O.on=true;O.loading=true;
  try{await catchup()}catch(e){O.loading=false;await leave('error');throw e}
- O.loading=false;localDiff();connect();$('#st').textContent='En línea · '+room.name.slice(0,24);sync();D=1;
+ O.loading=false;localDiff();connect();
+ if(room.host===me){const R=room;rpc('get_room_password',{p_room:R.id}).then(v=>{if(room===R){R.pw=v||'';draw()}}).catch(()=>{})}$('#st').textContent='En línea · '+room.name.slice(0,24);sync();D=1;
  tmr.push(setInterval(liveTick,150),setInterval(()=>{tick++;const n=Date.now(),now=performance.now();
   if(tick%20===0||(doc.act!==lastAct&&tick%2===0))hbNow();
   if(down&&n-downSince>20000){downSince=n;closeCh();connect()}   // si Supabase no recupera el canal solo, se reconstruye
   if(doc.strokes.some(s=>s.live&&now-(s.t||0)>6000)){doc.strokes=doc.strokes.filter(s=>{if(s.live&&now-(s.t||0)>6000){mir.s.delete(s.i);return false}return true});D=1}},1000));
  requestAnimationFrame(loop);hbNow();draw()}
-async function leave(why){const r=room;if(!r)return;room=null;O.on=false;O.loading=false;teardown();
+async function leave(why){const r=room;if(!r)return;room=null;O.on=false;O.loading=false;rev=false;teardown();
+ if(PIN.opan){PIN.opan=0;fxPin('opan',0)}   // fuera de la sala el candado no existe: se suelta la ventana
  if(why==='left'){try{await rpc('leave_room',{p_room:r.id})}catch{}}
- let saved=false;if((why==='closed'||why==='gone'||why==='full')&&doc.strokes.some(s=>!s.live)){try{await saveCopy(r);saved=true}catch{}}
+ let saved=false;if((why==='closed'||why==='gone'||why==='full'||why==='kicked')&&doc.strokes.some(s=>!s.live)){try{await saveCopy(r);saved=true}catch{}}
  for(const[,p]of peers)p.el.remove();peers.clear();out=[];sent.clear();roster=[];
  if(PS){Object.assign(doc,PS.d);undo=PS.u;redo=PS.r;PS=null}
  try{bgI.value=doc.bg}catch{}fit();sync();D=1;if(p5.classList.contains('on'))listL();
  $('#st').textContent='Guardado';$('#bO').classList.remove('live');view_='menu';draw();
  const cp=saved?' Se guardó una copia del dibujo en Proyectos.':'';
- toast(why==='closed'?'La sala se ha cerrado (la cerró el anfitrión o caducó).'+cp:why==='hosted'?'Has cerrado la sala.':why==='full'?'Tu plaza fue ocupada mientras estabas desconectado: la sala está llena.'+cp:why==='gone'?'Ya no formas parte de la sala.'+cp:why==='error'?'No se pudo cargar la sala.':'Has salido de la sala.',4200)}
+ toast(why==='closed'?'La sala se ha cerrado (la cerró el anfitrión o estuvo desconectado más de 10 minutos).'+cp:why==='hosted'?'Has cerrado la sala.':why==='full'?'Tu plaza fue ocupada mientras estabas desconectado: la sala está llena.'+cp:why==='gone'?'Ya no formas parte de la sala.'+cp:why==='kicked'?'El anfitrión te ha expulsado de la sala.'+cp:why==='error'?'No se pudo cargar la sala.':'Has salido de la sala.',4200)}
 async function saveCopy(r){const o=document.createElement('canvas');o.width=160;o.height=Math.round(160*doc.h/doc.w);render(o.getContext('2d'),0,160/doc.w,0,doc.w,doc.h);
  await tx('pj','readwrite',s=>s.put({id:nid(),name:('Sala: '+r.name).slice(0,60),mod:Date.now(),thumb:o.toDataURL('image/jpeg',.7),doc:{strokes:doc.strokes.filter(s=>!s.live),layers:doc.layers,act:doc.act,bg:doc.bg,w:doc.w,h:doc.h}}))}
+async function kick(m){const a=await ask({t:'¿Expulsar a '+m.name+'?',m:'Saldrá de la sala. Podrá volver a entrar con el código y la contraseña.',ok:'Expulsar',okc:'red'});if(a.r!=='ok'||!room)return;
+ try{await rpc('kick_member',{p_room:room.id,p_user:m.u});bc('hint',{});toast(m.name+' ha sido expulsado',2000);hbNow()}catch(e){toast(errMsg(e))}}
 async function closeRoom(){const a=await ask({t:'¿Cerrar la sala?',m:'Todos los participantes serán expulsados. Se guardará una copia en tus proyectos.',ok:'Cerrar sala',okc:'red'});if(a.r!=='ok')return;
  try{await rpc('close_room',{p_room:room.id});bc('hint',{});await saveCopy(room);toast('Copia guardada en Proyectos',1800)}catch(e){toast(errMsg(e));return}leave('hosted')}
 
@@ -177,20 +186,27 @@ function draw(){const p=P();if(!p||!p.classList.contains('open'))return;const ke
  if(room){hd(p,'Sala');const n=document.createElement('b');n.style.fontSize='17px';n.textContent=room.name;p.append(n);
   const cd=document.createElement('div');cd.className='cd';cd.innerHTML='<code></code>';cd.firstChild.textContent=room.code;const cb=document.createElement('button');cb.className='btn';cb.style.width='auto';cb.textContent='Copiar';
   cb.onclick=async()=>{try{await navigator.clipboard.writeText(room.code);toast('Código copiado',1400)}catch{const r=document.createRange();r.selectNodeContents(cd.firstChild);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Selecciona y copia el código',2000)}};cd.append(cb);p.append(cd);
+  if(room.host===me&&room.pw){const pr=document.createElement('div');pr.className='cd';pr.innerHTML='<small style="color:var(--mu)">Contraseña</small><code class="pwv" style="font-size:16px;min-width:0;overflow-wrap:anywhere"></code>';
+   const pv=pr.querySelector('code'),eb=document.createElement('button');eb.className='btn pwe';eb.setAttribute('aria-label','Mantén pulsado para ver la contraseña');eb.title='Mantén pulsado para ver';eb.innerHTML=ico('eye');
+   const show=()=>{pv.textContent=rev?room.pw:'•'.repeat(Math.min(room.pw.length,20))};show();
+   const on=e=>{if(e&&e.preventDefault)e.preventDefault();rev=true;show()};eb.onpointerdown=on;eb.oncontextmenu=e=>e.preventDefault();
+   eb.onkeydown=e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat)on(e)};eb.onkeyup=()=>{rev=false;show()};eb.onblur=()=>{rev=false;show()};
+   pr.append(eb);p.append(pr)}
   hd(p,roster.length+'/'+room.max+' jugadores'+(down?' · reconectando…':''));
   for(const m of roster){const d=document.createElement('div');d.className='pr';d.innerHTML='<i></i><span></span><small></small>';d.firstChild.style.background=col(m.color);d.querySelector('span').textContent=m.name+(m.u===me?' (tú)':'');
-   if(m.host){const e=document.createElement('em');e.textContent='Anfitrión';e.className='hb';d.querySelector('span').append(' ',e)}d.querySelector('small').textContent=layerName(m.layer);p.append(d)}
+   if(m.host){const e=document.createElement('em');e.textContent='Anfitrión';e.className='hb';d.querySelector('span').append(' ',e)}d.querySelector('small').textContent=layerName(m.layer);
+   if(room.host===me&&m.u!==me){const kb=document.createElement('button');kb.className='kb';kb.textContent='Expulsar';kb.setAttribute('aria-label','Expulsar a '+m.name);kb.onclick=()=>kick(m);d.append(kb)}p.append(d)}
   who(p);btn(p,'Guardar copia local',async()=>{try{await saveCopy(room);toast('Copia guardada en Proyectos',1800)}catch{toast('No se pudo guardar la copia')}});
-  btn(p,'Abandonar sala',()=>{togglePanel(false);leave('left')});if(room.host===me)btn(p,'Cerrar sala (para todos)',closeRoom,'red');
-  note(p,'Tus ajustes de pincel son solo tuyos. Los proyectos locales se restauran al salir.');return}
+  if(room.host===me)btn(p,'Cerrar sala (para todos)',closeRoom,'red');else btn(p,'Abandonar sala',()=>{togglePanel(false);leave('left')});   // el anfitrión no puede "abandonar": solo cerrar
+  note(p,room.host===me?'Si pasas más de 10 minutos desconectado, la sala se cierra para todos y se borra. Una caída corta de wifi no pasa nada.':'Tus ajustes de pincel son solo tuyos. Los proyectos locales se restauran al salir.');return}
  hd(p,view_==='create'?'Crear sala':view_==='join'?'Unirse a una sala':'Dibujar con amigos');
  if(view_==='menu'){btn(p,'Crear sala',()=>go('create'),'pri');btn(p,'Unirse a una sala',()=>go('join'));note(p,'Hasta 5 personas dibujando a la vez. Sin cuentas ni instalación.');who(p)}
  else{const bk=btn(p,'‹ Volver',()=>{view_='menu';draw()});bk.style.width='auto';who(p);
-  if(view_==='create'){const n=inp(p,'Nombre de la sala',{maxLength:60}),pw=inp(p,'Contraseña (opcional)',{type:'password',maxLength:72,autocomplete:'new-password'});
+  if(view_==='create'){const n=noFill(inp(p,'Nombre de la sala',{maxLength:60})),pw=noFill(inp(p,'Contraseña (opcional)',{maxLength:72}),true);
    hd(p,'Máximo de participantes');chips(p,[[2,'2'],[3,'3'],[4,'4'],[5,'5']],FM,'max');
    if(doc.strokes.length){hd(p,'Lienzo inicial');chips(p,[[false,'En blanco'],[true,'Mi dibujo actual']],FM,'mine')}
    errEl(p);btn(p,'Crear sala',()=>{const v=n.value.trim();if(!v)return msg('Pon un nombre a la sala.');run(()=>doCreate(v,pw.value))},'pri')}
-  else{const c=inp(p,'Código de invitación',{maxLength:8,autocapitalize:'characters',spellcheck:false,autocomplete:'off'}),pw=inp(p,'Contraseña (si la sala la tiene)',{type:'password',maxLength:72,autocomplete:'off'});
+  else{const c=inp(p,'Código de invitación',{maxLength:8,autocapitalize:'characters',spellcheck:false,autocomplete:'off'}),pw=noFill(inp(p,'Contraseña (si la sala la tiene)',{maxLength:72}),true);noFill(c);
    c.style.letterSpacing='.12em';c.oninput=()=>c.value=c.value.toUpperCase().replace(/[^A-Z0-9]/g,'');errEl(p);
    btn(p,'Entrar',()=>{if(c.value.length<8)return msg('El código tiene 8 caracteres.');run(()=>doJoin(c.value,pw.value))},'pri')}}
  p.scrollTop=keep}
@@ -208,5 +224,6 @@ $('#p4').addEventListener('click',e=>{if(O.on&&e.target.closest('button')&&!/tut
 $('#bO').onclick=()=>togglePanel();
 document.addEventListener('pointerdown',e=>{if(P().classList.contains('open')&&!e.target.closest('#opan,#bO,.dlg'))togglePanel(false)},true);
 addEventListener('keydown',e=>{if(e.key==='Escape')togglePanel(false)});
+for(const ev of['pointerup','pointercancel','blur'])addEventListener(ev,()=>{if(rev){rev=false;const v=P().querySelector('.pwv');if(v&&room)v.textContent='•'.repeat(Math.min((room.pw||'').length,20))}});
 document.addEventListener('visibilitychange',()=>{if(room&&!document.hidden){hbNow();catchup().catch(()=>{})}});
 })();
