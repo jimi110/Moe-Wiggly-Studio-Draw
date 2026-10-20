@@ -48,6 +48,11 @@ create table if not exists public.room_ops (
 );
 create index if not exists room_ops_room_id_idx on public.room_ops (room_id, id);
 
+-- NUEVO: contraseña visible solo para el anfitrión (RLS sin políticas: ningún cliente la lee directamente;
+-- solo la devuelve get_room_password() y únicamente al anfitrión) y marca de "expulsado" (no permanente).
+alter table public.room_secrets add column if not exists pass_plain text;
+alter table public.room_members add column if not exists kicked boolean not null default false;
+
 -- ---------- RLS: los clientes SOLO pueden leer lo de sus salas; todo se escribe vía RPC ----------
 alter table public.rooms         enable row level security;
 alter table public.room_secrets  enable row level security;
@@ -61,7 +66,7 @@ grant select on public.rooms, public.room_members, public.room_ops to authentica
 create or replace function public.is_room_member(p_room uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.room_members m
-                 where m.room_id = p_room and m.user_id = (select auth.uid()));
+                 where m.room_id = p_room and m.user_id = (select auth.uid()) and not m.kicked);
 $$;
 
 drop policy if exists rooms_select on public.rooms;
@@ -105,15 +110,43 @@ $$ select interval '90 seconds' $$;   -- un miembro sin latido durante 90 s deja
 create or replace function public._clean_name(p text) returns text language sql immutable set search_path = '' as
 $$ select coalesce(nullif(left(btrim(regexp_replace(coalesce(p,''), '\s+', ' ', 'g')), 24), ''), 'Invitado') $$;
 
--- limpieza de datos caducados (se llama al crear salas; opcionalmente también con pg_cron)
+-- cierra una sala y borra al instante lo pesado (dibujo, contraseña, contadores). La fila de la sala y sus miembros
+-- se quedan 5 minutos solo para que los clientes se enteren de que está cerrada; después _cleanup() las borra.
+create or replace function public._close_room(p_room uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.rooms set closed = true, closed_at = now() where id = p_room and not closed;
+  delete from public.room_ops     where room_id = p_room;
+  delete from public.room_secrets where room_id = p_room;
+  delete from public.room_stats   where room_id = p_room;
+end $$;
+
+-- limpieza total (la ejecuta pg_cron cada minuto, ver el final del archivo; también se llama al crear salas):
+--  1) sala abierta cuyo anfitrión lleva más de 10 min sin dar señales → se cierra y se borra su dibujo
+--  2) sala cerrada hace más de 5 min → se borra por completo (miembros incluidos)
+--  3) usuarios anónimos de Supabase sin ninguna sala y sin actividad en 1 día → se borran
 create or replace function public._cleanup() returns void
-language sql security definer set search_path = '' as $$
-  delete from public.rooms r
-   where (r.closed and r.closed_at < now() - interval '1 hour')
-      or (not r.closed and r.created_at < now() - interval '2 hours'
-          and not exists (select 1 from public.room_members m
-                          where m.room_id = r.id and m.last_seen > now() - interval '2 hours'));
-$$;
+language plpgsql security definer set search_path = '' as $$
+declare v uuid;
+begin
+  for v in select r.id from public.rooms r
+            where not r.closed
+              and coalesce((select max(m.last_seen) from public.room_members m
+                             where m.room_id = r.id and m.user_id = r.host_id), r.created_at) < now() - interval '10 minutes'
+  loop
+    perform public._close_room(v);
+  end loop;
+  delete from public.rooms where closed and closed_at < now() - interval '5 minutes';
+  begin
+    delete from auth.users u
+     where u.is_anonymous
+       and coalesce(u.last_sign_in_at, u.created_at) < now() - interval '1 day'
+       and not exists (select 1 from public.room_members m where m.user_id = u.id)
+       and not exists (select 1 from auth.refresh_tokens t
+                        where t.user_id::text = u.id::text and t.updated_at > now() - interval '1 day');
+  exception when others then null;   -- si esta versión de Supabase difiere, la limpieza de salas sigue funcionando
+  end;
+end $$;
 
 -- ---------- RPC: crear sala ----------
 create or replace function public.create_room(p_name text, p_pass text, p_max int, p_user_name text)
@@ -144,7 +177,8 @@ begin
     end;
   end loop;
   if coalesce(p_pass,'') <> '' then
-    insert into public.room_secrets values (v_id, extensions.crypt(p_pass, extensions.gen_salt('bf', 8)));
+    insert into public.room_secrets(room_id, pass_hash, pass_plain)
+    values (v_id, extensions.crypt(p_pass, extensions.gen_salt('bf', 8)), p_pass);
   end if;
   insert into public.room_stats(room_id) values (v_id);
   insert into public.room_members(room_id, user_id, name, color) values (v_id, uid, public._clean_name(p_user_name), v_color);
@@ -156,7 +190,7 @@ create or replace function public.join_room(p_code text, p_pass text, p_user_nam
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   uid uuid := (select auth.uid());
-  r public.rooms; v_hash text; v_exists boolean; v_active int; v_own text; v_color text;
+  r public.rooms; v_hash text; v_exists boolean; v_active int; v_own text; v_color text; v_kicked boolean;
   v_used text[];
 begin
   if uid is null then raise exception 'not_authenticated'; end if;
@@ -166,8 +200,8 @@ begin
   if not found then raise exception 'room_not_found'; end if;
   if r.closed then raise exception 'room_closed'; end if;
 
-  select color into v_own from public.room_members where room_id = r.id and user_id = uid;
-  v_exists := found;
+  select color, kicked into v_own, v_kicked from public.room_members where room_id = r.id and user_id = uid;
+  v_exists := found and not coalesce(v_kicked, false);   -- un expulsado que vuelve debe poner la contraseña otra vez
   if not v_exists and r.has_password then
     select pass_hash into v_hash from public.room_secrets where room_id = r.id;
     if coalesce(p_pass,'') = '' or v_hash is null or extensions.crypt(p_pass, v_hash) <> v_hash then
@@ -177,7 +211,8 @@ begin
 
   select count(*), coalesce(array_agg(color), '{}') into v_active, v_used
     from public.room_members
-   where room_id = r.id and user_id <> uid and last_seen > now() - public._active_window();
+   where room_id = r.id and user_id <> uid and not kicked
+     and (last_seen > now() - public._active_window() or user_id = r.host_id);   -- la plaza del anfitrión siempre cuenta
   if v_active >= least(r.max_players, 5) then raise exception 'room_full'; end if;
 
   if v_own is not null and not (v_own = any(v_used)) then v_color := v_own;
@@ -189,7 +224,7 @@ begin
   insert into public.room_members(room_id, user_id, name, color, last_seen)
   values (r.id, uid, public._clean_name(p_user_name), v_color, now())
   on conflict (room_id, user_id) do update
-    set name = excluded.name, color = excluded.color, last_seen = now();
+    set name = excluded.name, color = excluded.color, last_seen = now(), kicked = false;
   return jsonb_build_object('room_id', r.id, 'code', r.code, 'name', r.name,
                             'max_players', r.max_players, 'host_id', r.host_id, 'color', v_color);
 end $$;
@@ -205,12 +240,15 @@ begin
   if not found then raise exception 'room_not_found'; end if;
   select * into m from public.room_members where room_id = p_room and user_id = uid;
   if not found then raise exception 'not_member'; end if;
+  if m.kicked then   -- el anfitrión lo expulsó
+    return jsonb_build_object('kicked', false, 'removed', true, 'closed', r.closed, 'members', '[]'::jsonb);
+  end if;
 
   if not r.closed then
     -- si estuvo desconectado más de 90 s, su plaza pudo ocuparla otra persona: se revalida el límite
-    if m.last_seen < now() - public._active_window() then
+    if uid <> r.host_id and m.last_seen < now() - public._active_window() then   -- el anfitrión nunca pierde su plaza
       select count(*) into v_active from public.room_members
-       where room_id = p_room and user_id <> uid and last_seen > now() - public._active_window();
+       where room_id = p_room and user_id <> uid and not kicked and last_seen > now() - public._active_window();
       if v_active >= least(r.max_players, 5) then
         delete from public.room_members where room_id = p_room and user_id = uid;
         return jsonb_build_object('kicked', true, 'closed', false, 'members', '[]'::jsonb);
@@ -220,7 +258,7 @@ begin
     if uid <> r.host_id then
       select max(last_seen) into v_host_seen from public.room_members where room_id = p_room and user_id = r.host_id;
       if coalesce(v_host_seen, r.created_at) < now() - interval '10 minutes' then
-        update public.rooms set closed = true, closed_at = now() where id = p_room;
+        perform public._close_room(p_room);
         r.closed := true;
       end if;
     end if;
@@ -235,7 +273,7 @@ begin
     select jsonb_agg(jsonb_build_object('u', user_id, 'name', name, 'color', color, 'layer', layer,
                                         'host', user_id = r.host_id) order by joined_at)
       from public.room_members
-     where room_id = p_room and last_seen > now() - public._active_window()), '[]'::jsonb));
+     where room_id = p_room and not kicked and last_seen > now() - public._active_window()), '[]'::jsonb));
 end $$;
 
 -- ---------- RPC: abandonar / cerrar ----------
@@ -255,8 +293,34 @@ create or replace function public.close_room(p_room uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare uid uuid := (select auth.uid());
 begin
-  update public.rooms set closed = true, closed_at = now() where id = p_room and host_id = uid and not closed;
-  if not found then raise exception 'host_only'; end if;
+  if not exists (select 1 from public.rooms where id = p_room and host_id = uid and not closed) then
+    raise exception 'host_only';
+  end if;
+  perform public._close_room(p_room);
+end $$;
+
+-- ---------- RPC: expulsar (solo anfitrión; NO es permanente: la persona puede volver con el código y la contraseña) ----------
+create or replace function public.kick_member(p_room uuid, p_user uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+declare uid uuid := (select auth.uid());
+begin
+  if not exists (select 1 from public.rooms where id = p_room and host_id = uid and not closed) then
+    raise exception 'host_only';
+  end if;
+  if p_user = uid then raise exception 'cannot_kick_self'; end if;
+  update public.room_members set kicked = true, last_seen = now() - interval '91 seconds'   -- libera su plaza al instante
+   where room_id = p_room and user_id = p_user;
+end $$;
+
+-- ---------- RPC: contraseña de la sala (solo la ve el anfitrión) ----------
+create or replace function public.get_room_password(p_room uuid) returns text
+language plpgsql stable security definer set search_path = '' as $$
+declare uid uuid := (select auth.uid());
+begin
+  if not exists (select 1 from public.rooms where id = p_room and host_id = uid) then
+    raise exception 'host_only';
+  end if;
+  return (select pass_plain from public.room_secrets where room_id = p_room);
 end $$;
 
 -- ---------- RPC: enviar operaciones de dibujo (persistentes) ----------
@@ -269,7 +333,7 @@ begin
   select * into r from public.rooms where id = p_room for update;   -- orden de ids = orden de commit
   if not found then raise exception 'room_not_found'; end if;
   if r.closed then raise exception 'room_closed'; end if;
-  if not exists (select 1 from public.room_members where room_id = p_room and user_id = uid) then
+  if not exists (select 1 from public.room_members where room_id = p_room and user_id = uid and not kicked) then
     raise exception 'not_member';
   end if;
   if jsonb_typeof(p_ops) is distinct from 'array' or jsonb_array_length(p_ops) > 200 then raise exception 'bad_ops'; end if;
@@ -295,13 +359,23 @@ end $$;
 -- ---------- permisos de ejecución ----------
 revoke all on function public.create_room(text,text,int,text), public.join_room(text,text,text),
   public.heartbeat(uuid,text,text), public.leave_room(uuid), public.close_room(uuid),
-  public.push_ops(uuid,jsonb), public._cleanup(), public.is_room_member(uuid), public.topic_room_id()
+  public.push_ops(uuid,jsonb), public._cleanup(), public._close_room(uuid), public.is_room_member(uuid), public.topic_room_id(),
+  public.kick_member(uuid,uuid), public.get_room_password(uuid)
   from public, anon;
-revoke all on function public._cleanup() from authenticated;   -- interna: solo la usan otras funciones
+revoke all on function public._cleanup(), public._close_room(uuid) from authenticated;   -- interna: solo la usan otras funciones
 grant execute on function public.create_room(text,text,int,text), public.join_room(text,text,text),
   public.heartbeat(uuid,text,text), public.leave_room(uuid), public.close_room(uuid),
-  public.push_ops(uuid,jsonb), public.is_room_member(uuid), public.topic_room_id() to authenticated;
+  public.push_ops(uuid,jsonb), public.is_room_member(uuid), public.topic_room_id(),
+  public.kick_member(uuid,uuid), public.get_room_password(uuid) to authenticated;
 
--- ---------- (opcional) limpieza automática cada hora con pg_cron ----------
--- Dashboard > Database > Extensions > activar "pg_cron" y luego ejecutar:
--- select cron.schedule('moe-wiggly-cleanup', '0 * * * *', $$select public._cleanup()$$);
+-- ---------- limpieza automática cada minuto con pg_cron ----------
+-- Es lo que borra las salas cuando no queda nadie (sin esto solo se limpiaría al crear salas nuevas).
+-- Si al ejecutar sale el aviso "pg_cron no está activo", actívalo en Dashboard > Database > Extensions > pg_cron
+-- y vuelve a ejecutar SOLO este bloque.
+do $$
+begin
+  create extension if not exists pg_cron;
+  perform cron.schedule('moe-wiggly-cleanup', '* * * * *', 'select public._cleanup()');
+exception when others then
+  raise notice 'pg_cron no está activo (%). Actívalo en Database > Extensions > pg_cron y vuelve a ejecutar este bloque.', sqlerrm;
+end $$;
