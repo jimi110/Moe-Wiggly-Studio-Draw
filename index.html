@@ -198,6 +198,20 @@ body .fcp.pd{background:var(--ac)!important;color:#fff;border-color:var(--ac)!im
 #sheet.pinned,#cpop.pinned,#opan.pinned{box-shadow:inset 0 1.5px 1px var(--gh),0 20px 60px rgba(0,0,0,.36)}
 .btn:disabled{opacity:.4;pointer-events:none}
 .vinfo{color:var(--mu);font-size:12px;margin:2px 0 8px;line-height:1.4}.vinfo.warn{color:#ff9f0a}
+
+/* ---------- burbuja de Liquid Glass: exactamente del tamaño y forma del botón ---------- */
+/* antes crecía hasta 1.1x con rebote y llevaba sombra exterior: se salía del botón y el panel la recortaba en los bordes */
+.chip::before,.btn::before{inset:-1px}   /* cubre también el borde de 1px (antes quedaba 1px por dentro y con la esquina distinta) */
+.chip::before,.btn::before,.ly .bs button::before,.pj button::before,.ib::before{
+ box-shadow:inset 0 1px 1px var(--gh),inset 0 -1px 2px rgba(255,255,255,.1);
+ transition:opacity .22s,transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s .32s}   /* sin rebote: nunca supera el tamaño del botón */
+.chip:active::before,.btn:active::before,.ly .bs button:active::before,.pj button:active::before,.ib:active::before{transform:scale(1)}
+@media(hover:hover){.chip:hover::before,.btn:hover::before,.ly .bs button:hover::before,.pj button:hover::before,.ib:hover::before{transform:scale(1)}}
+
+/* ---------- burbuja de las pestañas arrastrable ---------- */
+.tabs{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.tabs.drag,.tabs.drag button{cursor:grabbing}.tabs.drag button{transform:none!important}
+.tabs.drag .ind{box-shadow:inset 0 1px 1px var(--gh),0 8px 18px rgba(0,0,0,.32);filter:brightness(1.06)}
 </style></head><body>
 <div id="st" class="glass">Guardado</div><div id="toast" class="glass"></div><div id="cur"></div>
 <div id="stage"><div id="wrap"><canvas id="cv"></canvas></div></div>
@@ -474,9 +488,7 @@ hd(p2,'Acciones');btn(p2,'Restablecer vista (R)',()=>resetView(),'','reset');
 btn(p2,'Limpiar lienzo',async()=>{const a=await ask({t:'¿Limpiar el lienzo?',m:'Podrás deshacerlo.',ok:'Limpiar',okc:'red'});if(a.r==='ok')change(()=>doc.strokes=[])},'red','trash');
 hd(p2,'Interfaz');
 const glb=btn(p2,'',()=>{const o=document.body.classList.toggle('nogl');try{localStorage.setItem('wgl',o?'0':'1')}catch{}glT();D=1},'','glass'),glT=()=>setBt(glb,'Liquid Glass: '+(document.body.classList.contains('nogl')?'desactivado':'activado'),'glass');glT();
-p2.insertAdjacentHTML('beforeend','<p style="color:var(--mu);font-size:12px;margin:2px 0 6px">Si notas lag al dibujar o al mover el menú, desactívalo: se quitan los desenfoques y brillos.</p>');
 const pfb=btn(p2,'',()=>{G.perf=!G.perf;document.body.classList.toggle('perf',G.perf);try{localStorage.setItem('wperf',G.perf?'1':'0')}catch{}pfT();fit();D=1},'','bolt'),pfT=()=>setBt(pfb,'Modo rendimiento: '+(G.perf?'activado':'desactivado'),'bolt');pfT();
-p2.insertAdjacentHTML('beforeend','<p style="color:var(--mu);font-size:12px;margin:2px 0 6px">Para móviles u ordenadores lentos: dibuja a resolución estándar, limita la animación a 30 fps y quita desenfoques, sombras y transiciones. El dibujo se ve algo menos nítido.</p>');
 p2.insertAdjacentHTML('beforeend','<h4>Proyecto</h4>');
 btn(p2,'Importar proyecto (.wiggly)',()=>$('#imp').click(),'','upload');
 p2.insertAdjacentHTML('beforeend','<input type=file id=imp accept=".wiggly,application/json" hidden><p style="color:var(--mu);font-size:12px">Autoguardado local en este navegador. Si abres el HTML desde Archivos de iOS, el almacenamiento puede no persistir: exporta copias .wiggly.</p>');
@@ -680,24 +692,59 @@ function listL(){const L=lyr(),lc=fn=>{change(fn);listL()};p5.innerHTML='';btn(p
 const panes=[['Pincel',['p0']],['Vibración',['p1']],['Lienzo',['p2']],['Exportar',['p3']],['Proyectos',['p4']],['Capas',['p5']]];
 const lsTab=v=>{try{localStorage.setItem('wtab',v)}catch{}},sbEl=$('#sb'),sbPos={};
 function placeInd(i,anim){const ind=tabs.querySelector('.ind'),bs=tabs.querySelectorAll('button'),b=bs[i];if(!ind||!b)return;
- const to=b.offsetLeft-3,max=bs[bs.length-1].offsetLeft-3;let from=to;
- try{const m=new DOMMatrix(getComputedStyle(ind).transform);if(!isNaN(m.m41))from=m.m41}catch{}
+ const to=b.offsetLeft-3,max=bs[bs.length-1].offsetLeft-3;let from=to,s0=1,s1=1;
+ try{const m=new DOMMatrix(getComputedStyle(ind).transform);if(!isNaN(m.m41)){from=m.m41;s0=m.a;s1=m.d}}catch{}
  if(tab.a){tab.a.cancel();tab.a=null}
  ind.style.transition='none';ind.style.width=b.offsetWidth+'px';ind.style.transform=`translate3d(${to}px,0,0)`;
- const d=to-from;if(!anim||Math.abs(d)<1)return;
+ const d=to-from;if(!anim||(Math.abs(d)<1&&Math.abs(s0-1)<.01&&Math.abs(s1-1)<.01))return;
  /* rebote líquido calculado en la dirección real del movimiento (izquierda o derecha) */
  const dr=d>0?1:-1,ov=Math.min(12,Math.abs(d)*.1+3),cl=x=>Math.max(0,Math.min(max,x)),st=Math.min(.2,.08+Math.abs(d)/900),
   T=(x,sx,sy)=>`translate3d(${x}px,0,0) scale(${sx},${sy})`;
- try{tab.a=ind.animate([{transform:T(from,1,1),easing:'cubic-bezier(.2,.7,.3,1)'},{transform:T(cl(to+dr*ov),1+st,1-st*.7),offset:.5,easing:'ease-in-out'},{transform:T(cl(to-dr*ov*.35),.97,1.03),offset:.78,easing:'ease-in-out'},{transform:T(to,1,1)}],{duration:600})}catch{}}
+ try{tab.a=ind.animate([{transform:T(from,s0,s1),easing:'cubic-bezier(.2,.7,.3,1)'},{transform:T(cl(to+dr*ov),1+st,1-st*.7),offset:.5,easing:'ease-in-out'},{transform:T(cl(to-dr*ov*.35),.97,1.03),offset:.78,easing:'ease-in-out'},{transform:T(to,1,1)}],{duration:600})}catch{}}
 addEventListener('resize',()=>placeInd(tab.c||0,false));
 function tab(i){if(tab.c!==undefined)sbPos[tab.c]=sbEl.scrollTop;lsTab(i);const dr=i>=(tab.c||0)?1:-1,first=tab.c===undefined;tab.c=i;
  placeInd(i,!first&&sheet.classList.contains('open'));tabs.querySelectorAll('button').forEach((b,j)=>b.classList.toggle('on',i===j));
  /* la burbuja arranca primero; el cambio de panel se hace un frame después para que no le robe tiempo */
  const n=tab.n=(tab.n||0)+1,swap=()=>{if(tab.n!==n)return;sbEl.style.setProperty('--d',dr);[p0,p1,p2,p3,p4,p5].forEach((p,j)=>p.classList.toggle('on',i===j));if(i<2){(i?p1:p0).prepend(pv);pv.style.display='block'}else pv.style.display='none';if(i===3){updInfo();vidInfo()}if(i===2)p2.querySelectorAll('.chip[data-v]').forEach(x=>x.classList.toggle('on',x.dataset.v===doc.w+'x'+doc.h));sbEl.scrollTop=sbPos[i]||0;clearTimeout(tab.t);if(i===4||i===5)tab.t=setTimeout(()=>{if(tab.c===i)i===4?listP():listL()},200)};
  if(first)swap();else requestAnimationFrame(()=>requestAnimationFrame(swap))}
-const TI=['tbrush','wave','tcanvas','tdl','tfolder','tlayers'];panes.forEach(([n],i)=>{const b=document.createElement('button');b.innerHTML=ico(TI[i])+'<span></span>';b.lastChild.textContent=n;b.onclick=()=>tab(i);tabs.append(b)});tabs.insertAdjacentHTML('afterbegin','<i class="ind"></i>');
+const TI=['tbrush','wave','tcanvas','tdl','tfolder','tlayers'];panes.forEach(([n],i)=>{const b=document.createElement('button');b.innerHTML=ico(TI[i])+'<span></span>';b.lastChild.textContent=n;b.onclick=()=>{if(tab.pre===i){tab.pre=-1;return}tab.pre=-1;tab(i)};tabs.append(b)});tabs.insertAdjacentHTML('afterbegin','<i class="ind"></i>');
 function openSheet(i){if(sheet.classList.contains('open')&&tab.c===i){closeSheet(true);return}tab(i);sheet.classList.add('open');if(!PIN.sheet)document.body.classList.add('sh');requestAnimationFrame(()=>placeInd(tab.c,false))}
 function closeSheet(force){closeCp();if(PIN.sheet&&!force)return;sheet.classList.remove('open');document.body.classList.remove('sh')}
+/* arrastrar la burbuja de las pestañas: mantén pulsado (o arrastra) y muévela libremente como una gota; al soltar se abre la pestaña que tenga debajo */
+(()=>{let d=null,sup=false;
+const bs=()=>[...tabs.querySelectorAll('button')],
+ lim=()=>{const b=bs();return{min:b[0].offsetLeft-3,max:b[b.length-1].offsetLeft-3}},
+ near=c=>{let k=0,m=1e9;bs().forEach((b,j)=>{const x=Math.abs(b.offsetLeft+b.offsetWidth/2-c);if(x<m){m=x;k=j}});return k},
+ mark=k=>bs().forEach((b,j)=>b.classList.toggle('on',j===k)),
+ aim=(x,w)=>{const r=tabs.getBoundingClientRect(),L=lim();return Math.max(L.min,Math.min(L.max,x-r.left-w/2-3))};
+function step(t){if(!d||!d.on)return;const dt=Math.max(.001,Math.min(.05,(t-d.t)/1000));d.t=t;
+ d.pos+=(d.tgt-d.pos)*(1-Math.exp(-dt*24));                        // la gota sigue al dedo con un poco de inercia
+ const v=(d.pos-d.prev)/dt;d.prev=d.pos;d.v+=(v-d.v)*.25;
+ const sx=1+Math.min(.3,Math.abs(d.v)/3200),sy=1.05-(sx-1)*.45;     // se estira al moverse rápido y se aplasta un poco
+ d.el.style.transform=`translate3d(${d.pos}px,0,0) scale(${1.05*sx},${sy})`;
+ const k=near(d.pos+3+d.w/2);if(k!==d.idx){d.idx=k;mark(k)}
+ d.raf=requestAnimationFrame(step)}
+function begin(){if(!d||d.on)return;clearTimeout(d.tm);const el=tabs.querySelector('.ind');if(!el)return;
+ let p=0;try{p=new DOMMatrix(getComputedStyle(el).transform).m41||0}catch{}
+ if(tab.a){tab.a.cancel();tab.a=null}
+ d.on=true;d.el=el;d.w=el.offsetWidth;d.pos=d.prev=p;d.v=0;d.tgt=aim(d.cx,d.w);d.idx=near(p+3+d.w/2);d.t=performance.now();
+ el.style.transition='none';tabs.classList.add('drag');try{tabs.setPointerCapture(d.id)}catch{}
+ try{navigator.vibrate&&navigator.vibrate(8)}catch{}
+ d.raf=requestAnimationFrame(step)}
+function end(e){if(!d||(e&&e.pointerId!==d.id))return;const x=d;d=null;clearTimeout(x.tm);setTimeout(()=>{tab.pre=-1},100);if(!x.on)return;   // un toque corto sigue funcionando como siempre
+ cancelAnimationFrame(x.raf);tabs.classList.remove('drag');try{tabs.releasePointerCapture(x.id)}catch{}
+ sup=true;setTimeout(()=>{sup=false},80);
+ const cx=e&&e.clientX!=null?e.clientX:x.cx,i=e&&e.type==='pointercancel'?(tab.c||0):near(aim(cx,x.w)+3+x.w/2);
+ if(i!==tab.c)tab(i);else{mark(i);placeInd(i,true)}}
+tabs.addEventListener('pointerdown',e=>{if(d||!e.isPrimary||(e.pointerType==='mouse'&&e.button!==0))return;d={id:e.pointerId,x0:e.clientX,y0:e.clientY,cx:e.clientX,on:false};d.tm=setTimeout(begin,200);
+ const b=e.target.closest&&e.target.closest('button'),i=b?bs().indexOf(b):-1;if(i>=0&&i!==tab.c){tab.pre=i;tab(i)}});   // respuesta instantánea al tocar
+tabs.addEventListener('pointermove',e=>{if(!d||e.pointerId!==d.id)return;d.cx=e.clientX;
+ if(!d.on){const dx=e.clientX-d.x0,dy=e.clientY-d.y0;if(Math.abs(dx)>8&&Math.abs(dx)>Math.abs(dy))begin();else if(Math.hypot(dx,dy)>14){clearTimeout(d.tm);d=null}return}
+ d.tgt=aim(e.clientX,d.w)});
+tabs.addEventListener('pointerup',end);tabs.addEventListener('pointercancel',end);
+tabs.addEventListener('click',e=>{if(sup){e.stopPropagation();e.preventDefault()}},true);
+tabs.addEventListener('contextmenu',e=>e.preventDefault());
+})();
 $('#bBr').onclick=()=>openSheet(0);$('#bL').onclick=()=>openSheet(5);$('#bM').onclick=()=>{let t=+tab.c;if(!(t>=0&&t<panes.length))t=0;openSheet(t)};$('#bU').onclick=doUndo;$('#bR').onclick=doRedo;
 $('#bsz').oninput=e=>{B.size=+e.target.value;szIn.value=B.size;rp(szIn);szIn.parentNode.querySelector('output').textContent=B.size};rp($('#bsz'));
 const setCol=c=>{B.color=c;$('#col').style.setProperty('--c',c)};setCol(B.color);
