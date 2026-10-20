@@ -171,7 +171,9 @@ async function doCreate(n,pw){
  for(let i=0;i<strokes.length;){let j=i,sz=0;while(j<strokes.length&&j-i<100&&sz<300000)sz+=JSON.stringify(strokes[j++]).length;await rpc('push_ops',{p_room:r.room_id,p_ops:strokes.slice(i,j).map(p=>({k:'s',p}))});i=j}
  await enter(r)}
 async function doJoin(code,pw){const r=await rpc('join_room',{p_code:code,p_pass:pw||null,p_user_name:getName()});await enter(r)}
-async function run(fn){if(wait)return;wait=true;msg('');try{await init();await fn()}catch(e){msg(errMsg(e))}finally{wait=false}}
+async function run(fn,b,t){if(wait)return;wait=true;msg('');const o=b&&b.textContent;
+ if(b){b.disabled=true;b.style.opacity='.75';b.innerHTML='<i class="spin"></i><span></span>';b.lastChild.textContent=t}   // indicador de carga
+ try{await init();await fn()}catch(e){msg(errMsg(e))}finally{wait=false;if(b&&b.isConnected){b.disabled=false;b.style.opacity='';b.textContent=o}}}
 
 /* ---------- panel ---------- */
 const msg=t=>{const e=P().querySelector('.er');if(e)e.textContent=t||''};
@@ -198,17 +200,17 @@ function draw(){const p=P();if(!p||!p.classList.contains('open'))return;const ke
    if(room.host===me&&m.u!==me){const kb=document.createElement('button');kb.className='kb';kb.textContent='Expulsar';kb.setAttribute('aria-label','Expulsar a '+m.name);kb.onclick=()=>kick(m);d.append(kb)}p.append(d)}
   who(p);btn(p,'Guardar copia local',async()=>{try{await saveCopy(room);toast('Copia guardada en Proyectos',1800)}catch{toast('No se pudo guardar la copia')}});
   if(room.host===me)btn(p,'Cerrar sala (para todos)',closeRoom,'red');else btn(p,'Abandonar sala',()=>{togglePanel(false);leave('left')});   // el anfitrión no puede "abandonar": solo cerrar
-  note(p,room.host===me?'Si pasas más de 10 minutos desconectado, la sala se cierra para todos y se borra. Una caída corta de wifi no pasa nada.':'Tus ajustes de pincel son solo tuyos. Los proyectos locales se restauran al salir.');return}
+  return}
  hd(p,view_==='create'?'Crear sala':view_==='join'?'Unirse a una sala':'Dibujar con amigos');
  if(view_==='menu'){btn(p,'Crear sala',()=>go('create'),'pri');btn(p,'Unirse a una sala',()=>go('join'));note(p,'Hasta 5 personas dibujando a la vez. Sin cuentas ni instalación.');who(p)}
  else{const bk=btn(p,'‹ Volver',()=>{view_='menu';draw()});bk.style.width='auto';who(p);
   if(view_==='create'){const n=noFill(inp(p,'Nombre de la sala',{maxLength:60})),pw=noFill(inp(p,'Contraseña (opcional)',{maxLength:72}),true);
    hd(p,'Máximo de participantes');chips(p,[[2,'2'],[3,'3'],[4,'4'],[5,'5']],FM,'max');
    if(doc.strokes.length){hd(p,'Lienzo inicial');chips(p,[[false,'En blanco'],[true,'Mi dibujo actual']],FM,'mine')}
-   errEl(p);btn(p,'Crear sala',()=>{const v=n.value.trim();if(!v)return msg('Pon un nombre a la sala.');run(()=>doCreate(v,pw.value))},'pri')}
+   errEl(p);const cb=btn(p,'Crear sala',()=>{const v=n.value.trim();if(!v)return msg('Pon un nombre a la sala.');run(()=>doCreate(v,pw.value),cb,'Creando sala…')},'pri')}
   else{const c=inp(p,'Código de invitación',{maxLength:8,autocapitalize:'characters',spellcheck:false,autocomplete:'off'}),pw=noFill(inp(p,'Contraseña (si la sala la tiene)',{maxLength:72}),true);noFill(c);
    c.style.letterSpacing='.12em';c.oninput=()=>c.value=c.value.toUpperCase().replace(/[^A-Z0-9]/g,'');errEl(p);
-   btn(p,'Entrar',()=>{if(c.value.length<8)return msg('El código tiene 8 caracteres.');run(()=>doJoin(c.value,pw.value))},'pri')}}
+   const eb=btn(p,'Entrar',()=>{if(c.value.length<8)return msg('El código tiene 8 caracteres.');run(()=>doJoin(c.value,pw.value),eb,'Entrando…')},'pri')}}
  p.scrollTop=keep}
 
 /* ---------- integración con la app existente (sin sustituir su motor de dibujo) ---------- */
@@ -222,8 +224,8 @@ apply=function(s){if(!O.on)return _apply(s);                                  //
  _apply({...s,strokes:keep.concat(back),layers,act:s.act})};
 $('#p4').addEventListener('click',e=>{if(O.on&&e.target.closest('button')&&!/tutorial/i.test(e.target.textContent)){e.stopPropagation();e.preventDefault();toast('Estás en una sala: sal de ella para gestionar tus proyectos.')}},true);
 $('#bO').onclick=()=>togglePanel();
-document.addEventListener('pointerdown',e=>{if(P().classList.contains('open')&&!e.target.closest('#opan,#bO,.dlg'))togglePanel(false)},true);
-addEventListener('keydown',e=>{if(e.key==='Escape')togglePanel(false)});
+document.addEventListener('pointerdown',e=>{if(P().classList.contains('open')&&!PIN.opan&&!e.target.closest('#opan,#bO,.dlg,.fc'))togglePanel(false)},true);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!PIN.opan)togglePanel(false)});
 for(const ev of['pointerup','pointercancel','blur'])addEventListener(ev,()=>{if(rev){rev=false;const v=P().querySelector('.pwv');if(v&&room)v.textContent='•'.repeat(Math.min((room.pw||'').length,20))}});
 document.addEventListener('visibilitychange',()=>{if(room&&!document.hidden){hbNow();catchup().catch(()=>{})}});
 })();

@@ -135,7 +135,8 @@ progress[hidden]{display:none}.btn[hidden]{display:none}
 #opan h4:first-child{margin-top:2px}#opan .di{margin:4px 0}
 .who{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--mu);margin:6px 0}.who b{color:var(--tx)}.who button{border:0;background:var(--ln);color:var(--tx);border-radius:12px;padding:5px 10px;cursor:pointer}
 .cd{display:flex;gap:8px;align-items:center;margin:4px 0}.cd code{flex:1;font:600 20px ui-monospace,Menlo,monospace;letter-spacing:.12em;user-select:text;-webkit-user-select:text}
-.pr{display:flex;align-items:center;gap:8px;padding:6px 4px}.pr i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--ln)}.pr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr small{color:var(--mu);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.kb{border:0;background:var(--ln);color:#ff453a;border-radius:10px;padding:3px 9px;font-size:12px;cursor:pointer;flex:none}.pwe{width:auto;padding:6px 10px;flex:none;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-touch-callout:none}.pwe svg{width:18px;height:18px;display:block}.hb{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:var(--ac);border-radius:8px;padding:1px 6px}
+.pr{display:flex;align-items:center;gap:8px;padding:6px 4px}.pr i{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:0 0 0 1px var(--ln)}.pr span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pr small{color:var(--mu);max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.spin{width:14px;height:14px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;flex:none;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}body.perf .spin{animation:spin .7s linear infinite!important}
+.kb{border:0;background:var(--ln);color:#ff453a;border-radius:10px;padding:3px 9px;font-size:12px;cursor:pointer;flex:none}.pwe{width:auto;padding:6px 10px;flex:none;user-select:none;-webkit-user-select:none;touch-action:none;-webkit-touch-callout:none}.pwe svg{width:18px;height:18px;display:block}.hb{font-style:normal;font-size:10px;font-weight:700;color:#fff;background:var(--ac);border-radius:8px;padding:1px 6px}
 #oc{position:fixed;inset:0;z-index:6;pointer-events:none;overflow:hidden}.pc{position:absolute;left:0;top:0;will-change:transform}.pc i{display:block;width:12px;height:12px;margin:-2px 0 0 -2px;border-radius:0 50% 50% 50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.5);background:var(--c)}.pc span{position:absolute;left:14px;top:12px;white-space:nowrap;padding:2px 8px;border-radius:9px;font-size:11px;color:#fff;background:var(--c);text-shadow:0 0 2px rgba(0,0,0,.5);opacity:0;transition:opacity .2s}.pc.nm span{opacity:1}
 
 /* ---------- mejoras: iconos, animación de pestañas, lupa, modo sin Liquid Glass ---------- */
@@ -160,11 +161,13 @@ progress[hidden]{display:none}.btn[hidden]{display:none}
 #lp .ll{position:absolute;z-index:2;left:50%;bottom:8px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font:600 11px ui-monospace,Menlo,monospace;color:var(--tx);white-space:nowrap}
 #lp .ll i{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 1px var(--ln);background:var(--c,transparent)}
 /* modo sin Liquid Glass (más rápido) */
-body.nogl .glass{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:var(--sh)!important;box-shadow:0 4px 18px rgba(0,0,0,.18)!important;border-color:var(--ln)!important}
-body.nogl .ib::before,body.nogl .chip::before,body.nogl .btn::before,body.nogl .ly .bs button::before,body.nogl .pj button::before,body.nogl .tabs button::before{display:none}
-body.nogl .tabs .ind{background:var(--sh);box-shadow:0 1px 4px rgba(0,0,0,.22)}
-body.nogl.sh #cv{filter:none}
-body.nogl #bar{animation:none}
+body.nogl .glass,body.perf .glass{-webkit-backdrop-filter:none!important;backdrop-filter:none!important;background:var(--sh)!important;box-shadow:0 4px 18px rgba(0,0,0,.18)!important;border-color:var(--ln)!important}
+body.nogl .ib::before,body.nogl .chip::before,body.nogl .btn::before,body.nogl .ly .bs button::before,body.nogl .pj button::before,body.nogl .tabs button::before,body.perf .ib::before,body.perf .chip::before,body.perf .btn::before,body.perf .ly .bs button::before,body.perf .pj button::before,body.perf .tabs button::before{display:none}
+body.nogl .tabs .ind,body.perf .tabs .ind{background:var(--sh);box-shadow:0 1px 4px rgba(0,0,0,.22)}
+body.nogl.sh #cv,body.perf.sh #cv{filter:none}
+body.nogl #bar,body.perf #bar{animation:none}
+/* modo rendimiento: además, sin transiciones ni animaciones de la interfaz */
+body.perf *,body.perf *::before,body.perf *::after{transition:none!important;animation:none!important}
 
 /* burbuja de pestañas: medida real, sin rebote, sin burbujas duplicadas */
 .tabs .ind{width:0;transition:transform .38s cubic-bezier(.3,.8,.25,1),width .38s cubic-bezier(.3,.8,.25,1)}
@@ -217,7 +220,8 @@ body .fcp.pd{background:var(--ac)!important;color:#fff;border-color:var(--ac)!im
 const $=s=>document.querySelector(s);
 try{if(localStorage.getItem('wgl')==='0')document.body.classList.add('nogl')}catch{}
 const B={brush:'pxsq',color:'#000000',size:3,alpha:1,mode:'nervous',amp:3,speed:1.2,wl:50,irr:1,env:0,pb:'pxsq',tol:32};
-const G={anim:true,pause:false,gs:1},ER=['eraser','eraserSoft','pxerase'],PIN={sheet:0,cpop:0,opan:0};
+const G={anim:true,pause:false,gs:1,perf:false},ER=['eraser','eraserSoft','pxerase'],PIN={sheet:0,cpop:0,opan:0};
+try{if(localStorage.getItem('wperf')==='1'){G.perf=true;document.body.classList.add('perf')}}catch{}
 const defDim=()=>innerWidth>=900?[1000,563]:innerWidth<600?[563,1000]:[750,1000];let doc={strokes:[],bg:'#ffffff',w:defDim()[0],h:defDim()[1]},undo=[],redo=[],T=0,D=1,F=1,DPR=1,view={z:1,x:0,y:0},busy=false,cancel=false;
 const cv=$('#cv'),ctx=cv.getContext('2d'),wrap=$('#wrap'),sheet=$('#sheet');
 const lyr=()=>{if(!doc.layers||!doc.layers.length)doc.layers=[{id:'l1',name:'Capa 1',vis:1,lock:0,op:1}];if(!doc.layers.some(l=>l.id===doc.act))doc.act=doc.layers[doc.layers.length-1].id;for(const s of doc.strokes)if(!s.layer)s.layer=doc.layers[0].id;return doc.layers},actL=()=>lyr().find(l=>l.id===doc.act),LC=[];
@@ -296,20 +300,20 @@ function render(c,t,k,loop,W,H,ox=0,oy=0,bg=doc.bg){c.setTransform(k,0,0,k,ox,oy
 /* ---------- lienzo ----------
    El canvas ocupa toda la zona de dibujo y a su resolución real de pantalla.
    El zoom y el desplazamiento se aplican al dibujar (vectorial), así que nunca se ve pixelado. */
-function fit(){DPR=Math.min(devicePixelRatio||1,3);const W=cv.clientWidth,H=cv.clientHeight;F=Math.max(.02,Math.min((W-16)/doc.w,(H-60)/doc.h));cv.width=Math.max(1,Math.round(W*DPR));cv.height=Math.max(1,Math.round(H*DPR));D=1}
+function fit(){DPR=G.perf?1:Math.min(devicePixelRatio||1,3);const W=cv.clientWidth,H=cv.clientHeight;F=Math.max(.02,Math.min((W-16)/doc.w,(H-60)/doc.h));cv.width=Math.max(1,Math.round(W*DPR));cv.height=Math.max(1,Math.round(H*DPR));D=1}
 addEventListener('resize',fit);
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
 function paint(){const W=cv.width,H=cv.height,s=F*view.z*DPR,w=doc.w*s,h=doc.h*s,ox=W/2+view.x*DPR-w/2,oy=H/2+view.y*DPR-h/2,r=6*DPR;
  ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.clearRect(0,0,W,H);
  const cover=ox<=0&&oy<=0&&ox+w>=W&&oy+h>=H;
- ctx.save();if(!cover){ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=40*DPR;ctx.shadowOffsetY=8*DPR}ctx.fillStyle=doc.bg;rr(ctx,ox,oy,w,h,r);ctx.fill();ctx.restore();
+ ctx.save();if(!cover&&!G.perf){ctx.shadowColor='rgba(0,0,0,.18)';ctx.shadowBlur=40*DPR;ctx.shadowOffsetY=8*DPR}ctx.fillStyle=doc.bg;rr(ctx,ox,oy,w,h,r);ctx.fill();ctx.restore();
  ctx.save();rr(ctx,ox,oy,w,h,r);ctx.clip();render(ctx,T,s,0,doc.w,doc.h,ox,oy);ctx.restore()}
-let last=0,fc=0;const pv=$('#pv'),pc=pv.getContext('2d');
+let last=0,fc=0,lpt=0;const pv=$('#pv'),pc=pv.getContext('2d');
 function frame(ts){const dt=Math.min(.1,(ts-last)/1000||0);last=ts;if(!G.pause)T+=dt*G.gs;
  fc++;const so=sheet.classList.contains('open');
- if(!vexp&&((G.anim&&!G.pause&&!(so&&!PIN.sheet&&(fc&1)))||D)){paint();D=0}
+ if(!vexp&&((G.anim&&!G.pause&&!(so&&!PIN.sheet&&(fc&1))&&(!G.perf||ts-lpt>=28))||D)){paint();D=0;lpt=ts}   // modo rendimiento: la animación pasiva va a ~30 fps; dibujar sigue a pleno ritmo
  if(eye)drawLp();
- if(so&&!vexp&&pv.style.display!=='none'){
+ if(so&&!vexp&&pv.style.display!=='none'&&(!G.perf||fc%6===0)){
   const pts=[];let l=0,st=B.brush==='dots'||B.brush==='stars'?Math.max(4,B.size*1.4):4;for(let x=20;x<=260;x+=st){const y=35+14*Math.sin(x/25);if(pts.length){const p=pts[pts.length-1];l+=Math.hypot(x-p[0],y-p[1])}pts.push([x,y,Math.sin(3.14*(x-20)/240),l])}
   pc.setTransform(2,0,0,2,0,0);pc.fillStyle=doc.bg;pc.fillRect(0,0,280,70);const sm=B.brush==='smudge';if(sm){pc.fillStyle='#ff3b30';pc.fillRect(70,0,16,70);pc.fillStyle='#0a84ff';pc.fillRect(150,0,16,70)}stroke(pc,{...B,seed:3,erase:false,pts,size:sm?Math.max(14,B.size):B.size,mode:sm?'none':B.mode,color:ER.includes(B.brush)?'#999':B.color},T,0,2)}
  requestAnimationFrame(frame)}
@@ -434,6 +438,7 @@ x:'<path d="M6 6l12 12M18 6L6 18"/>',
 file:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/>',
 play:'<path d="M7 4l13 8-13 8z"/>',
 pause:'<path d="M8 5v14M16 5v14"/>',
+bolt:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
 glass:'<path d="M11 3l1.8 4.6L17.4 9l-4.6 1.4L11 15l-1.8-4.6L4.6 9l4.6-1.4z"/><path d="M18 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
 eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
 eyeoff:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>',
@@ -470,6 +475,8 @@ btn(p2,'Limpiar lienzo',async()=>{const a=await ask({t:'¿Limpiar el lienzo?',m:
 hd(p2,'Interfaz');
 const glb=btn(p2,'',()=>{const o=document.body.classList.toggle('nogl');try{localStorage.setItem('wgl',o?'0':'1')}catch{}glT();D=1},'','glass'),glT=()=>setBt(glb,'Liquid Glass: '+(document.body.classList.contains('nogl')?'desactivado':'activado'),'glass');glT();
 p2.insertAdjacentHTML('beforeend','<p style="color:var(--mu);font-size:12px;margin:2px 0 6px">Si notas lag al dibujar o al mover el menú, desactívalo: se quitan los desenfoques y brillos.</p>');
+const pfb=btn(p2,'',()=>{G.perf=!G.perf;document.body.classList.toggle('perf',G.perf);try{localStorage.setItem('wperf',G.perf?'1':'0')}catch{}pfT();fit();D=1},'','bolt'),pfT=()=>setBt(pfb,'Modo rendimiento: '+(G.perf?'activado':'desactivado'),'bolt');pfT();
+p2.insertAdjacentHTML('beforeend','<p style="color:var(--mu);font-size:12px;margin:2px 0 6px">Para móviles u ordenadores lentos: dibuja a resolución estándar, limita la animación a 30 fps y quita desenfoques, sombras y transiciones. El dibujo se ve algo menos nítido.</p>');
 p2.insertAdjacentHTML('beforeend','<h4>Proyecto</h4>');
 btn(p2,'Importar proyecto (.wiggly)',()=>$('#imp').click(),'','upload');
 p2.insertAdjacentHTML('beforeend','<input type=file id=imp accept=".wiggly,application/json" hidden><p style="color:var(--mu);font-size:12px">Autoguardado local en este navegador. Si abres el HTML desde Archivos de iOS, el almacenamiento puede no persistir: exporta copias .wiggly.</p>');
