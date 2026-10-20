@@ -6,6 +6,20 @@ Os presento **Moe Wiggly Studio**, mi propia aplicación de dibujo en movimiento
 
 Os hago un pequeño recorrido por lo que podéis encontrar, pero os recomiendo de verdad que entréis, lo probéis y trasteéis un poco. ¡Seguro que descubrís combinaciones que ni yo me esperaba! 😄
 
+## ¡Hola! Soy Jimi 👋
+
+**Esta es mi creación.** ✨
+
+<p align="center">
+  <img src="assets/wiggly%20(1).png" alt="Wiggly" width="300">
+</p>
+
+## ✨ Y ahora... ¡con movimiento, cobro vida!
+
+<p align="center">
+  <img src="assets/wiggly.gif" alt="Wiggly en movimiento" width="300">
+</p>
+
 ## 🖌️ Aquí los trazos no se quedan quietos
 
 Podéis usar distintos pinceles y estilos: desde lápices y rotuladores hasta tinta, neón, tiza, estrellas, puntos y efectos de píxeles. Pero la gracia no acaba ahí. También hay diferentes maneras de darle movimiento a lo que dibujáis, con efectos ondulados, líquidos, nerviosos, elásticos, caóticos y algún que otro glitch. Vamos, que podéis hacer una línea normalita… o conseguir que parezca que está teniendo un día complicado.
