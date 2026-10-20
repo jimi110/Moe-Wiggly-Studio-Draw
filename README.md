@@ -11,14 +11,16 @@ Os hago un pequeño recorrido por lo que podéis encontrar, pero os recomiendo d
 **Esta es mi creación.** ✨
 
 <p align="center">
-  <img src="assets/wiggly%20(1).png" alt="Wiggly" width="300">
+  <img src="assets/wiggly%20(1).png" alt="Wiggly" width="500">
 </p>
 
 ## ✨ Y ahora... ¡con movimiento, cobro vida!
 
 <p align="center">
-  <img src="assets/wiggly.gif" alt="Wiggly en movimiento" width="300">
+  <img src="assets/wiggly.gif" alt="Wiggly en movimiento" width="500">
 </p>
+
+Me lo pasé súper bien dibujando este boceto!
 
 ## 🖌️ Aquí los trazos no se quedan quietos
 
