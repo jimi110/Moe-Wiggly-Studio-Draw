@@ -22,7 +22,7 @@ Here's a quick tour of what you can find inside, but honestly, I'd really encour
 
 I had an absolute blast drawing this little sketch!
 
-#Direct link: https://jimi110.github.io/Moe-Wiggly-Studio-Draw/
+**Direct link: https://jimi110.github.io/Moe-Wiggly-Studio-Draw/**
 
 ## 🖌️ Here, strokes don't just sit still
 
@@ -64,4 +64,4 @@ If you run into a bug or have an idea for an improvement, let me know in the rep
 
 **Thanks for stopping by Moe Wiggly Studio! Now go draw something weird and show me what you've got.** 🖤
 
-#Direct link: https://jimi110.github.io/Moe-Wiggly-Studio-Draw/
+**Direct link: https://jimi110.github.io/Moe-Wiggly-Studio-Draw/**
