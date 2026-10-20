@@ -22,6 +22,8 @@ Here's a quick tour of what you can find inside, but honestly, I'd really encour
 
 I had an absolute blast drawing this little sketch!
 
+#Direct link: https://jimi110.github.io/Moe-Wiggly-Studio-Draw/
+
 ## 🖌️ Here, strokes don't just sit still
 
 You can choose from all sorts of brushes and styles, from pencils and markers to ink, neon, chalk, stars, dots, and pixel effects. But that's only half the fun. There are also plenty of ways to bring your drawings to life, with wavy, fluid, jittery, stretchy, chaotic, and even glitchy effects. Basically, you can draw a perfectly ordinary line... or make it look like it's having a really rough day.
@@ -61,3 +63,5 @@ I've put a lot of time into making this more than just a blank canvas, and I'm g
 If you run into a bug or have an idea for an improvement, let me know in the repository's Issues section. I'd love to hear what you think and what you'd like to see in the future.
 
 **Thanks for stopping by Moe Wiggly Studio! Now go draw something weird and show me what you've got.** 🖤
+
+#Direct link: https://jimi110.github.io/Moe-Wiggly-Studio-Draw/
