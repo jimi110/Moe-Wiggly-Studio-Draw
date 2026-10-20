@@ -287,7 +287,7 @@ function cells2(s,g,Q){const M=new Map(),b=s.brush;let pr=null;
   for(const[i,j]of F){if(b==='pxdither'&&Math.abs(cx+cy+i+j)%2)continue;M.set((cx+i)+','+(cy+j),[cx+i,cy+j])}};
  for(const p of Q){if(pr){const n=Math.max(1,Math.ceil(Math.hypot(p[0]-pr[0],p[1]-pr[1])/(g*.7)));for(let i=1;i<=n;i++)add(pr[0]+(p[0]-pr[0])*i/n,pr[1]+(p[1]-pr[1])*i/n)}else add(p[0],p[1]);pr=p}
  return[...M.values()]}
-function render(c,t,k,loop,W,H,ox=0,oy=0){c.setTransform(k,0,0,k,ox,oy);c.globalAlpha=1;c.fillStyle=doc.bg;c.fillRect(0,0,W,H);for(const l of lyr()){if(!l.vis)continue;const ss=doc.strokes.filter(s=>s.layer===l.id);if(!ss.length)continue;
+function render(c,t,k,loop,W,H,ox=0,oy=0,bg=doc.bg){c.setTransform(k,0,0,k,ox,oy);c.globalAlpha=1;if(bg){c.fillStyle=bg;c.fillRect(0,0,W,H)}for(const l of lyr()){if(!l.vis)continue;const ss=doc.strokes.filter(s=>s.layer===l.id);if(!ss.length)continue;
  if(l.op>=1&&!ss.some(s=>s.erase||s.brush==='smudge')){for(const s of ss)stroke(c,s,t,loop,k);continue}
  /* caché de capa propia para el lienzo visible (0) y otra para exportaciones/miniaturas (1): así no se realoca en cada fotograma */
  const W2=c.canvas.width,H2=c.canvas.height,ci=c.canvas===cv?0:1,o=LC[ci]&&LC[ci].width===W2&&LC[ci].height===H2?LC[ci]:(LC[ci]=Object.assign(document.createElement('canvas'),{width:W2,height:H2})),x=o.getContext('2d');
@@ -474,7 +474,7 @@ p2.insertAdjacentHTML('beforeend','<h4>Proyecto</h4>');
 btn(p2,'Importar proyecto (.wiggly)',()=>$('#imp').click(),'','upload');
 p2.insertAdjacentHTML('beforeend','<input type=file id=imp accept=".wiggly,application/json" hidden><p style="color:var(--mu);font-size:12px">Autoguardado local en este navegador. Si abres el HTML desde Archivos de iOS, el almacenamiento puede no persistir: exporta copias .wiggly.</p>');
 $('#imp').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const j=JSON.parse(await f.text());if(j.app!=='wiggly'||!Array.isArray(j.doc.strokes))throw 0;change(()=>Object.assign(doc,{layers:j.doc.layers||null,act:null,strokes:j.doc.strokes,bg:j.doc.bg||'#ffffff',w:j.doc.w||1000,h:j.doc.h||1000}));bgI.value=doc.bg;toast('Proyecto importado')}catch{toast('El archivo no es un proyecto Wiggly válido.')}e.target.value=''};
-const X={sc:3,w:640,d:2,fps:20,loops:0};
+const X={sc:3,w:640,d:2,fps:20,loops:0,tr:0};
 function sel(p,l,o,k,opts,cb){hd(p,l);const w=document.createElement('div');w.className='dd';
  w.innerHTML='<button class="ddb"><span></span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button><div class="ddl"><div></div></div>';
  const bt=w.querySelector('.ddb'),lb=bt.firstChild,ls=w.querySelector('.ddl>div'),upd=()=>{lb.textContent=(opts.find(x=>x[0]===o[k])||opts[0])[1];ls.querySelectorAll('.ddo').forEach((b,i)=>b.classList.toggle('on',opts[i][0]===o[k]))};
@@ -486,20 +486,20 @@ const pngSc=()=>Math.min(X.sc,MAXSIDE/Math.max(doc.w,doc.h),Math.sqrt(MAXPX/(doc
 const pngInfo=document.createElement('p');pngInfo.style.cssText='color:var(--mu);font-size:12px;margin:2px 0 6px';
 function updInfo(){const s=pngSc();pngInfo.textContent=`Resultado: ${Math.round(doc.w*s)} × ${Math.round(doc.h*s)} px`+(s<X.sc-1e-6?' (ajustado al máximo que admite tu dispositivo)':'')}
 hd(p3,'PNG (re-renderizado en alta resolución)');sel(p3,'Escala',X,'sc',[[1,'1×'],[2,'2×'],[3,'3×'],[4,'4×'],[6,'6×'],[8,'8×']],updInfo);p3.append(pngInfo);updInfo();
-btn(p3,'Descargar PNG',()=>{const s=pngSc(),o=document.createElement('canvas');o.width=Math.round(doc.w*s);o.height=Math.round(doc.h*s);const c=o.getContext('2d');if(!c){toast('No se pudo generar el PNG: prueba una escala menor.');return}render(c,T,o.width/doc.w,0,doc.w,doc.h);o.toBlob(b=>b?(dl(b,'wiggly.png'),toast(`PNG guardado (${o.width}×${o.height})`)):toast('No se pudo generar el PNG: prueba una escala menor.'),'image/png')},'pri','download');
+sel(p3,'Fondo',X,'tr',[[0,'Color del lienzo'],[1,'Transparente (solo el dibujo)']]);
+btn(p3,'Descargar PNG',()=>{const s=pngSc(),o=document.createElement('canvas');o.width=Math.round(doc.w*s);o.height=Math.round(doc.h*s);const c=o.getContext('2d');if(!c){toast('No se pudo generar el PNG: prueba una escala menor.');return}render(c,T,o.width/doc.w,0,doc.w,doc.h,0,0,X.tr?null:doc.bg);o.toBlob(b=>b?(dl(b,'wiggly.png'),toast(`PNG guardado (${o.width}×${o.height})`+(X.tr?' · fondo transparente':''))):toast('No se pudo generar el PNG: prueba una escala menor.'),'image/png')},'pri','download');
 hd(p3,'GIF animado (bucle sin costuras)');sel(p3,'Ancho',X,'w',[[320,'320 px'],[480,'480 px'],[640,'640 px'],[800,'800 px'],[1000,'1000 px']]);sel(p3,'Duración del bucle',X,'d',[[1,'1 s'],[2,'2 s'],[3,'3 s'],[4,'4 s']]);sel(p3,'Fotogramas/s',X,'fps',[[10,'10'],[15,'15'],[20,'20'],[25,'25'],[30,'30']]);sel(p3,'Repeticiones',X,'loops',[[0,'Infinito'],[1,'Una vez'],[3,'3 veces']]);
 const gb=btn(p3,'Generar GIF',exportGif,'pri','film'),gp=document.createElement('progress');gp.hidden=true;gp.max=1;p3.append(gp);
 const gc=btn(p3,'Cancelar',()=>cancel=true,'','x');gc.hidden=true;
-p3.insertAdjacentHTML('beforeend','<p style="color:var(--mu);font-size:12px">GIF admite solo 256 colores (paleta fija de 216): los degradados y el neón pierden suavidad y no hay transparencia.</p>');
 hd(p3,'Vídeo (alta calidad, hasta 8K y 15 s)');
-const VX={h:1080,d:5,fps:30,q:.2};
+const VX={h:1080,d:5,fps:30,q:.2,key:0};
 sel(p3,'Resolución',VX,'h',[[720,'HD · 720p'],[1080,'Full HD · 1080p'],[1440,'2K · 1440p'],[2160,'4K · 2160p'],[4320,'8K · 4320p']],()=>vidInfo());
 row(p3,'Duración (segundos, máx. 15)',VX,'d',1,15,1,()=>vidInfo());
 sel(p3,'Fotogramas/s',VX,'fps',[[24,'24'],[30,'30'],[60,'60']],()=>vidInfo());
 sel(p3,'Calidad',VX,'q',[[.12,'Alta'],[.2,'Muy alta'],[.32,'Máxima']],()=>vidInfo());
+sel(p3,'Fondo',VX,'key',[[0,'Color del lienzo'],['#00ff00','Pantalla verde (croma)'],['#0000ff','Pantalla azul (croma)'],['#ff00ff','Pantalla magenta (croma)']]);
 const vi=document.createElement('p');vi.className='vinfo';p3.append(vi);
 const vb=btn(p3,'Generar vídeo',()=>exportVideo(),'pri','film');
-p3.insertAdjacentHTML('beforeend','<p class="vinfo">Se genera en tu dispositivo y queda en bucle sin costuras. Es vídeo real, con todos los colores (sin la paleta de 256 del GIF). El 8K y los 60 fps pueden tardar varios minutos: no cambies de app mientras se genera.</p>');
 hd(p3,'Proyecto editable');btn(p3,'Exportar .wiggly',()=>dl(new Blob([JSON.stringify({app:'wiggly',v:1,doc})],{type:'application/json'}),'dibujo.wiggly'),'','file');
 function dl(b,n){const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000)}
 /* ---------- GIF ---------- */
@@ -637,8 +637,8 @@ async function exportVideo(){if(busy)return;
   enc.configure(r.cfg);
   for(let i=0;i<n;i++){
    if(P.cancel||err)break;
-   c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.fillStyle=doc.bg;c.fillRect(0,0,W,H);
-   render(c,D0*i/n,k,D0,doc.w,doc.h,ox,oy);
+   c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.fillStyle=VX.key||doc.bg;c.fillRect(0,0,W,H);
+   render(c,D0*i/n,k,D0,doc.w,doc.h,ox,oy,VX.key||doc.bg);
    const f=new VideoFrame(cvx,{timestamp:Math.round(i*1e6/fps),duration:Math.round(1e6/fps)});
    try{enc.encode(f,{keyFrame:i%gop===0})}finally{f.close()}
    while(enc.encodeQueueSize>2&&!err&&!P.cancel)await new Promise(q=>setTimeout(q,3));
@@ -736,7 +736,7 @@ btn(p4,'Nuevo proyecto',async()=>{const has=doc.strokes.length>0,a=await ask({t:
  clearTimeout(sv);if(a.r==='alt'){if(pid)await tx('pj','readwrite',s=>s.delete(pid))}else if(has)await saveNow();else if(pid&&pname==='Sin título')await tx('pj','readwrite',s=>s.delete(pid));
  pid=nid();lsSet(pid);pname=(a.v||'Sin título').slice(0,60);Object.assign(doc,{strokes:[],bg:'#ffffff',w:defDim()[0],h:defDim()[1]});bgI.value='#ffffff';resetView();reset();await saveNow();listP();toast('Proyecto nuevo: '+pname)},'pri','plus');
 btn(p4,'Guardar ahora',async()=>{await saveNow();toast('Guardado en este dispositivo')},'','save');
-const TUT=[['Bienvenido a Moe Wiggly Studio','Una app de dibujo cuyos trazos parecen tener vida. Te cuento lo básico en seis pasos.'],['Dibuja y usa la barra','Dibuja con el dedo, el ratón o el Apple Pencil. La barra de abajo tiene el pincel, el color, el tamaño, deshacer y rehacer, y el menú.'],['Pinceles y vibración','En «Pincel» eliges la herramienta y en «Vibración», cómo se mueve el trazo. Cada trazo guarda su propio color, pincel y vibración, así que puedes mezclarlos.'],['Lienzo y zoom','En «Lienzo» cambias el formato y el color de fondo. Con dos dedos haces zoom y mueves la vista. En PC, la rueda del ratón hace zoom donde apuntas y el botón central mueve el lienzo. Para volver a la vista normal, pulsa la tecla R o el botón de esquinas que aparece arriba a la derecha cuando has hecho zoom.'],['Ventanas flotantes','Cada ventana (menú, color y online) tiene un candado. Al cerrarlo se queda fija y abierta mientras dibujas; si pulsas el botón que la abre, se esconde pero sigue fija y, al volver a abrirla, aparece en el mismo sitio. Arrastra la barrita de abajo para moverla por la pantalla y la curva pequeña de la esquina inferior derecha para cambiar su tamaño (hay un tamaño mínimo). En PC aparecen al acercar el ratón; en móvil, al tocar la ventana. Si abres el candado, la ventana se cierra y vuelve a su sitio de siempre.'],['Guardar y exportar','Todo se guarda solo en tu dispositivo. En «Proyectos» gestionas tus dibujos y en «Exportar» sacas PNG, GIF animado, un vídeo en bucle de hasta 8K y 15 s (se genera en tu dispositivo, con todos los colores) o un archivo .wiggly.']];
+const TUT=[['Bienvenido a Moe Wiggly Studio','Una app de dibujo con trazos que parecen vivos. Lo básico en seis pasos.'],['Dibuja y usa la barra','Dibuja con el dedo, el ratón o el Apple Pencil. La barra de abajo tiene pincel, color, tamaño, deshacer, rehacer y menú.'],['Pinceles y vibración','En «Pincel» eliges la herramienta y en «Vibración» cómo se mueve el trazo. Cada trazo guarda su propio estilo.'],['Lienzo y zoom','En «Lienzo» cambias formato y fondo. Con dos dedos haces zoom y mueves la vista. En PC, la rueda hace zoom y el botón central mueve. Pulsa R para volver a la vista normal.'],['Ventanas flotantes','Cada ventana tiene un candado. Cerrado, la ventana se queda fija: muévela con la barrita de abajo y cambia su tamaño con la curva de la esquina. Si pulsas el botón que la abre, se esconde y vuelve al mismo sitio. Abre el candado para soltarla.'],['Guardar y exportar','Todo se guarda solo en tu dispositivo. En «Proyectos» gestionas tus dibujos y en «Exportar» sacas PNG, GIF, vídeo o un archivo .wiggly.']];
 function showTut(){let i=0;const d=document.createElement('div');d.className='dlg';d.innerHTML='<div class="dc glass"><div class="td"></div><div class="tb"><b></b><p></p></div><div class="db"><button class="btn">Saltar</button><button class="btn pri"></button></div></div>';
  const [sk,nx]=d.querySelectorAll('.btn'),td=d.querySelector('.td'),tb=d.querySelector('.tb'),end=()=>{try{localStorage.setItem('wtut','1')}catch{}d.classList.remove('on');setTimeout(()=>d.remove(),350)};
  TUT.forEach(()=>td.append(document.createElement('i')));
